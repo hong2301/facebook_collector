@@ -92,11 +92,13 @@ def parse_body_tree(lines):
 
 
 class GraphQLRecorder(threading.Thread):
-    def __init__(self, tab, outdir=RAW_DIR, exclude_docs=None, group=""):
+    def __init__(self, tab, outdir=RAW_DIR, exclude_docs=None, group="",
+                 feed_only=True):
         super().__init__(daemon=True)
         self.tab = tab
         self.outdir = outdir
         self.group = group or ""
+        self.feed_only = feed_only
         self.exclude = set(exclude_docs or ())
         self.running = True
         self.seq = 0
@@ -165,8 +167,8 @@ class GraphQLRecorder(threading.Thread):
                 except (TypeError, ValueError):
                     pass
 
-        # 非 feed 响应（配置、埋点等）不落盘
-        if not post_ids:
+        # 默认只保留 feed 响应；帖子页采集时 feed_only=False
+        if not post_ids and self.feed_only:
             return
 
         end_cursor = ""

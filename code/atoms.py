@@ -9,6 +9,9 @@
 组合功能见 code/features.py，实现细节见 code/lib/。
 """
 
+import csv
+import json
+import os
 import time
 
 from lib import session
@@ -18,6 +21,9 @@ from lib.config import RAW_DIR
 from lib.listener import GraphQLRecorder
 from lib.logger import get_logger
 from lib.scroll import at_bottom, scroll_once
+from lib.comments import parse_response
+from lib.utils import pick_pause
+from lib import post as postlib
 
 log = get_logger("collector")
 
@@ -124,3 +130,103 @@ def _idle_grew(_round):
     grew = h > _height["last"]
     _height["last"] = h
     return not grew
+
+
+def collect_post(post_url, output=RAW_DIR, sort="all",
+                 max_comments=0, pause_min=1.0, pause_max=3.0,
+                 scroll_pause_min=1.0, scroll_pause_max=3.0,
+                 max_idle=6, max_rounds=500, prune_keep=40):
+    """【核心】采集一个帖子：帖子基本数据 + 完整评论。
+
+    Args:
+        post_url:     帖子链接
+        output:       输出目录（raw 与解析结果都写这里）
+        sort:         评论排序 most_relevant / newest / all（默认 all）
+        max_comments: 评论数量上限，0 表示不限制
+        pause_min/max: 点击展开后的随机等待（秒）
+        scroll_pause_min/max: 每次滚动后的随机等待（秒）
+        max_idle:     连续无新增评论的轮数上限
+        max_rounds:   滚动轮数硬上限
+        prune_keep:   保留最近的评论节点数，其余在确认无未展开回复后删除
+
+    Returns:
+        dict：post_id / comments / rounds / reason
+    """
+    global _recorder
+    tab = session.get_tab()
+    # 同 URL 再 get 不会触发请求，先离开
+    if post_url.split("?")[0].rstrip("/") in (tab.url or ""):
+        tab.get("https://www.facebook.com/")
+        time.sleep(2)
+    tab.get(post_url)
+    wait_doc(tab, 30)
+    time.sleep(6)
+    os.makedirs(output, exist_ok=True)
+
+    post_id = postlib.parse_post_id(post_url)
+    base = postlib.extract_post(post_id)
+
+    conn = _recorder
+    tab.listen.start("graphql")
+    _recorder = GraphQLRecorder(tab, output, group=post_url, feed_only=False)
+    _recorder.start()
+    log.info("监听已启动 -> %s | 帖子 %s", output, post_id)
+
+    postlib.set_sort(sort)
+
+    rounds = idle = 0
+    reason = "max_rounds"
+    comments = {}
+    try:
+        while rounds < max_rounds:
+            rounds += 1
+            postlib.scroll_to_bottom()
+            time.sleep(pick_pause(scroll_pause_min, scroll_pause_max))
+            clicked = postlib.expand_comments(limit=6, pause_min=pause_min, pause_max=pause_max)
+            postlib.prune_comments(prune_keep)
+
+            before = len(comments)
+            comments = _collect_parsed(_recorder)
+            if len(comments) > before:
+                idle = 0
+                log.info("评论 %s 条（第 %s 轮，点击 %s）", len(comments), rounds, clicked)
+            else:
+                idle += 1
+
+            if max_comments and len(comments) >= max_comments:
+                reason = "max_comments"
+                break
+            st = postlib.scroller_state()
+            if idle >= max_idle and st.get("atBottom"):
+                reason = "no_new_content"
+                break
+    finally:
+        captured = len(_recorder.records) if _recorder else 0
+        if _recorder:
+            _recorder.stop()
+            _recorder = None
+        try:
+            tab.listen.stop()
+        except Exception:
+            pass
+        log.info("监听已停止，捕获 %s 个响应", captured)
+
+    postlib.save_result(output, post_id, post_url, base, comments)
+    info = {"post_id": post_id, "comments": len(comments), "rounds": rounds,
+            "reason": reason}
+    log.info("帖子采集完成：%s", info)
+    return info
+
+
+def _collect_parsed(recorder):
+    """把已捕获的响应解析成评论字典（按 comment_id 去重）。"""
+    out = {}
+    for rec in list(recorder.records):
+        path = os.path.join(recorder.outdir, rec["file"])
+        if not os.path.exists(path):
+            continue
+        with open(path, encoding="utf-8") as f:
+            raw = f.read()
+        for c in parse_response(raw):
+            out[c["comment_id"]] = c
+    return out

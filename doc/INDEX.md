@@ -19,8 +19,8 @@
 
 | 文件 | 职责 | 关键内容 |
 |---|---|---|
-| `code/atoms.py` | **原子层**（最小可执行单元） | `open_port(port)` / `check_login()` / `collect_group_posts(url, output, since, ..., reload)` |
-| `code/features.py` | **功能层**（原子组合 + 功能参数 + CLI） | `collect_group_feed(input_file, start, end, output, port, ..., reload)` |
+| `code/atoms.py` | **原子层**（最小可执行单元） | 小组：`open_port` / `check_login` / `collect_group_posts`<br>帖子：`collect_post(post_url, output, sort, max_comments, ...)` |
+| `code/features.py` | **功能层**（原子组合 + 功能参数 + CLI） | `collect_group_feed(...)`（主页）<br>`collect_post_url(...)`（帖子+评论） |
 
 ### 实现层 `code/lib/`
 
@@ -32,7 +32,9 @@
 | `code/lib/session.py` | 会话状态 | `open_port` / `pick_tab` / `get_tab` / `is_connected`，全局状态存 `_state` |
 | `code/lib/auth.py` | 登录检测 | `is_logged_in(tab)`，只读 `c_user` cookie |
 | `code/lib/listener.py` | GraphQL 监听 | `GraphQLRecorder`（后台线程落盘）、`parse_body_tree()`（JSONL 合并）、`RAW_DIR` |
-| `code/lib/scroll.py` | 滚动与 DOM 清理 | `scroll_once` / `scroll_until` / `prune_dom` / `at_bottom` / `page_state` |
+| `code/lib/scroll.py` | 主页滚动与 DOM 清理 | `scroll_once` / `scroll_until` / `prune_dom` / `at_bottom` / `page_state` |
+| `code/lib/post.py` | 帖子页：数据提取 / 排序 / 展开 / 清理 | `extract_post` / `set_sort` / `scroll_to_bottom` / `expand_comments` / `prune_comments` / `save_result` |
+| `code/lib/comments.py` | 评论解析 | `parse_response`（顶层 + Depth1/Depth2）、`parse_comment_node` |
 | `code/lib/__init__.py` | 包说明（各模块一行职责） | — |
 | `code/lib/utils.py` | 通用工具 | `read_input` / `select_groups` / `normalize_url` / `pick_pause` |
 
@@ -77,8 +79,12 @@ data/raw/<seq>_<ts>_<doc_id>.jsonl  +  data/raw/index.csv
 python code/features.py                        # 默认参数采集
 python code/features.py --since 2025-01-01
 python code/features.py -i other.txt --start 0 --end 1
-python code/features.py -q                     # 静默
-python code/features.py --resume               # 接续：不重新加载，从当前位置继续滚
+python code/features.py group -q               # 静默
+python code/features.py group --resume         # 接续：不重新加载
+
+# 采集单个帖子 + 完整评论
+python code/features.py post <帖子链接> --sort all
+python code/features.py post <帖子链接> --sort all --max-comments 100   --scroll-pause-min 1.5 --scroll-pause-max 3 --pause-min 1.5 --pause-max 3
 
 # 或在代码里组合原子动作
 python -c "import sys; sys.path.insert(0,'code'); import index; atoms.open_port(9227); atoms.check_login()"
@@ -93,7 +99,16 @@ python -c "import sys; sys.path.insert(0,'code'); import index; atoms.open_port(
 | 新参数 | 功能函数签名 + `features.main()` 的 argparse（属于该功能自己） |
 | 新文档 | `doc/`，并更新本文件第 3 节 |
 
-## 7. 当前数据（2025-01-01 ~ 2026-11-12）
+## 7. 帖子采集输出
+
+```
+data/posts/<post_id>.json          帖子：author / post_time / text / like_count / comment_count
+data/posts/comments/<post_id>.csv  评论：depth 0-2、parent_id、作者、正文、时间、点赞
+```
+
+同名 `post_id` 配对。评论排序必须用 `all`（最相关只有 25 条，所有评论 35 条）。
+
+## 8. 当前数据（2025-01-01 ~ 2026-11-12）
 
 | 项 | 值 |
 |---|---|

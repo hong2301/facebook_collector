@@ -1,8 +1,9 @@
 """功能层：由 atoms.py 的原子函数组合出的业务流程。
 
-| 功能              | 函数                     | 参数                                       |
-|------------------|--------------------------|--------------------------------------------|
-| 采集小组主页帖子    | collect_group_feed(...)  | input_file / start / end / output / port / 采集参数 |
+| 功能              | 函数                        | 参数 |
+|------------------|-----------------------------|------|
+| 采集小组主页帖子    | `collect_group_feed(...)`   | input_file / start / end / output / port / 采集参数 |
+| 采集单个帖子+评论   | `collect_post_url(...)`     | post_url / output / sort / max_comments / 等待参数 |
 
 参数属于功能本身，其它功能不共用。直接运行本文件即按默认参数执行。
 """
@@ -73,31 +74,85 @@ def collect_group_feed(input_file=INPUT_FILE, start=0, end=0, output=RAW_DIR,
     return ok, fail
 
 
-def main(argv=None):
-    ap = argparse.ArgumentParser(description="采集小组主页帖子")
-    ap.add_argument("-i", "--input-file", default=INPUT_FILE,
-                    help="输入清单文件，一行一个小组链接")
-    ap.add_argument("--start", type=int, default=0, help="起始索引（含）")
-    ap.add_argument("--end", type=int, default=0, help="结束索引（不含），0=末尾")
-    ap.add_argument("-o", "--output", default=RAW_DIR, help="原始数据输出目录")
-    ap.add_argument("--port", type=int, default=9227, help="浏览器调试端口")
-    ap.add_argument("--since", default="2025-01-01", help="采集下限日期")
-    ap.add_argument("--step", type=int, default=1800, help="每次滚动像素")
-    ap.add_argument("--pause-min", type=float, default=1.0, help="停顿下限（秒）")
-    ap.add_argument("--pause-max", type=float, default=3.0, help="停顿上限（秒）")
-    ap.add_argument("--max-idle", type=int, default=10, help="连续无新内容轮数上限")
-    ap.add_argument("--max-rounds", type=int, default=99999, help="滚动轮数硬上限")
-    ap.add_argument("--prune-every", type=int, default=4, help="每 N 轮清理旧 DOM")
-    ap.add_argument("--keep-screens", type=int, default=8, help="保留视口上方屏数")
-    ap.add_argument("--resume", dest="reload", action="store_false",
-                    help="接续模式：沿用当前页面位置，不重新加载")
-    ap.add_argument("-q", "--quiet", action="store_true", help="控制台只输出警告")
-    a = ap.parse_args(argv)
 
+def collect_post_url(post_url, output=RAW_DIR, sort="all", max_comments=0,
+                     pause_min=1.0, pause_max=3.0,
+                     scroll_pause_min=1.0, scroll_pause_max=3.0,
+                     max_idle=6, max_rounds=500, prune_keep=40, port=9227):
+    """采集单个帖子：帖子基本数据 + 完整评论。
+
+    Args:
+        post_url:       帖子链接
+        output:         输出目录（raw 与解析结果都写这里）
+        sort:           评论排序 most_relevant / newest / all
+        max_comments:   评论数量上限，0 不限
+        pause_min/max:  点击展开后的随机等待（秒）
+        scroll_pause_min/max: 每次滚动后的随机等待（秒）
+    """
+    os.makedirs(output, exist_ok=True)
+    log.info("端口=%s 输出=%s 排序=%s 评论上限=%s 滚动等待=%.1f-%.1fs",
+             port, output, sort, max_comments or "不限",
+             scroll_pause_min, scroll_pause_max)
+
+    atoms.open_port(port)
+    if not atoms.check_login():
+        return {}
+
+    return atoms.collect_post(
+        post_url, output, sort=sort, max_comments=max_comments,
+        pause_min=pause_min, pause_max=pause_max,
+        scroll_pause_min=scroll_pause_min, scroll_pause_max=scroll_pause_max,
+        max_idle=max_idle, max_rounds=max_rounds, prune_keep=prune_keep)
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description="Facebook 采集功能")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    g = sub.add_parser("group", help="采集小组主页帖子")
+    g.add_argument("-i", "--input-file", default=INPUT_FILE,
+                   help="输入清单文件，一行一个小组链接")
+    g.add_argument("--start", type=int, default=0)
+    g.add_argument("--end", type=int, default=0, help="0=末尾")
+    g.add_argument("-o", "--output", default=RAW_DIR)
+    g.add_argument("--port", type=int, default=9227)
+    g.add_argument("--since", default="2025-01-01")
+    g.add_argument("--step", type=int, default=1800)
+    g.add_argument("--pause-min", type=float, default=1.0)
+    g.add_argument("--pause-max", type=float, default=3.0)
+    g.add_argument("--max-idle", type=int, default=10)
+    g.add_argument("--max-rounds", type=int, default=99999)
+    g.add_argument("--prune-every", type=int, default=4)
+    g.add_argument("--keep-screens", type=int, default=8)
+    g.add_argument("-q", "--quiet", action="store_true")
+
+    p = sub.add_parser("post", help="采集单个帖子 + 评论")
+    p.add_argument("post_url", metavar="URL", help="帖子链接")
+    p.add_argument("-o", "--output", default=os.path.join(ROOT, "data", "posts"))
+    p.add_argument("--port", type=int, default=9227)
+    p.add_argument("--sort", default="all",
+                   choices=["most_relevant", "newest", "all"],
+                   help="评论排序")
+    p.add_argument("--max-comments", type=int, default=0, help="0=不限")
+    p.add_argument("--pause-min", type=float, default=1.0,
+                   help="点击展开后的等待下限（秒）")
+    p.add_argument("--pause-max", type=float, default=3.0)
+    p.add_argument("--scroll-pause-min", type=float, default=1.0,
+                   help="每次滚动后的等待下限（秒）")
+    p.add_argument("--scroll-pause-max", type=float, default=3.0)
+    p.add_argument("--max-idle", type=int, default=6)
+    p.add_argument("--max-rounds", type=int, default=500)
+    p.add_argument("--prune-keep", type=int, default=40,
+                   help="保留最近的评论节点数")
+    p.add_argument("-q", "--quiet", action="store_true")
+
+    a = ap.parse_args(argv)
     setup(quiet=a.quiet)
-    params = vars(a)
-    params.pop("quiet", None)
-    collect_group_feed(**params)
+    params = {k: v for k, v in vars(a).items() if k not in ("cmd", "quiet")}
+    if a.cmd == "group":
+        collect_group_feed(**params)
+    else:
+        collect_post_url(**params)
 
 
 if __name__ == "__main__":

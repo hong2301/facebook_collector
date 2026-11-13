@@ -26,7 +26,7 @@ facebook_collector/
 ├── SKILL.md            给 AI 看：维护约定、禁区、验证清单
 ├── code/input.csv           输入清单（CSV，url 列）
 ├── code/
-│   ├── atoms.py        原子层（打开端口 / 检测登录 / 采集一个主页）
+│   ├── atoms.py        原子层（打开端口 / 检测登录 / 采集主页 / 采集帖子）
 │   ├── features.py     功能层（原子组合 + 功能参数 + CLI 入口）
 │   └── lib/            实现层
 │       ├── config.py     路径常量
@@ -35,7 +35,9 @@ facebook_collector/
 │       ├── session.py    会话状态（端口 / 浏览器 / 标签页）
 │       ├── auth.py       登录检测
 │       ├── listener.py   GraphQL 监听（GraphQLRecorder）
-│       ├── scroll.py     滚动 + DOM 清理
+│       ├── scroll.py     主页滚动 + DOM 清理
+│       ├── post.py       帖子页：正文提取 / 评论排序 / 展开 / 清理
+│       ├── comments.py   评论解析（顶层 + 回复）
 │       └── utils.py      输入清单 / 切片 / 停顿
 ├── data/raw/           接口原始响应（一请求一文件）+ index.csv
 ├── doc/               细分文档（索引 / 接口 / 字段 / URL 参数 / 已知问题）

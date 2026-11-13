@@ -5,3 +5,6 @@ data/raw/*.jsonl
 data/raw/index.csv
 .DS_Store
 .env
+data/posts/
+data/_post_test*/
+data/_probe*/

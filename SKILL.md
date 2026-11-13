@@ -46,6 +46,7 @@ code/
 | `atoms.open_port(port)` | 接管 CDP 端口，未启动则按 profile 拉起（保留登录态） |
 | `atoms.check_login()` | 只读 `c_user` cookie，**不导航页面** |
 | `atoms.collect_group_posts(url, output, since, ..., reload=True)` | 打开链接（或沿用当前页）→ 常开监听 → 滚动 → 停止 → 返回统计 |
+| `atoms.collect_post(post_url, output, sort, max_comments, pause_min, pause_max, scroll_pause_min, scroll_pause_max, max_idle, max_rounds, prune_keep)` | 帖子页 → 提取正文 → 切排序 → 滚动 + 展开回复 → 停止 → 存 JSON + CSV |
 
 ## 现有功能
 
@@ -55,7 +56,14 @@ features.collect_group_feed(input_file, start, end, output, port, since,
                             max_rounds, prune_every, keep_screens, reload)
 ```
 
-CLI：`python code/features.py [--since ...] [-i file] [--start N --end M] [--resume] [-q]`
+```python
+features.collect_post_url(post_url, output, sort="all", max_comments=0,
+                          pause_min=1.0, pause_max=3.0,
+                          scroll_pause_min=1.0, scroll_pause_max=3.0,
+                          max_idle=6, max_rounds=500, prune_keep=40)
+```
+
+CLI：`python code/features.py group [...]` / `python code/features.py post <url> [...]`
 
 `--resume`：`reload=False`，沿用当前页面位置继续滚，不重新加载。用于中断后续采。
 
@@ -80,6 +88,24 @@ open_port → check_login
 | 监听数据出现早于 `since` 的帖子 | `reached_since` |
 | 连续 `max_idle` 轮到底且高度不增长 | `no_new_content` |
 | 达到 `max_rounds` | `max_rounds` |
+
+## 帖子采集要点
+
+| 项 | 结论 |
+|---|---|
+| 排序 | **必须选 `all`（所有评论）**；默认「最相关」只给精选，本条帖子 25 条 vs 35 条 |
+| 排序切换 | 必须用真实鼠标点击（JS `click()` 打不开菜单）；菜单项按**首行文本**匹配，副标题也含「所有评论」 |
+| 展开回复 | 逐个点「全部N条回复/查看N条回复/查看更多评论」，每个之间随机等 `pause_min~pause_max` |
+| 滚动等待 | 独立参数 `scroll_pause_min~scroll_pause_max`，默认 1-3 秒 |
+| 评论接口 | `CommentsListComponentsPaginationQuery`（顶层）+ `Depth1/Depth2CommentsListPaginationQuery`（回复） |
+| 层级 | 最多 3 级（depth 0/1/2），三级下不再有四级 |
+| 停止 | 达到 `max_comments` / 连续 `max_idle` 轮无新增且到底 / `max_rounds` |
+
+## DOM 清理（评论页）
+
+- 帖子本体（最长且 >400 字符的 article）**永不删**
+- 只删「自身及子孙没有待展开按钮」的评论节点，有子评论先跳过
+- composer 整块 = `contenteditable` 的最近 `div[role="table"]`，连头像/工具/发布一起删，保留最后一块
 
 ## 数据契约
 
@@ -130,3 +156,5 @@ python code/features.py --since 2026-11-01 --max-rounds 5   # 短跑验证
 | 连接端口超时 | 标签页残留过多，用 CDP `/json/close/<id>` 清理 |
 | 登录检查失败 | 9227 端口未登录，或页面被重定向到 `/login` |
 | 停止过早 | `min_ts` 判断过于激进，或 `since` 设置得太近 |
+| 评论比页面少 | 排序不是 `all`，或展开按钮没点到（DOM 里 `NoRectError` 说明元素不可见） |
+| 排序切错 | 菜单项用了 `contains` 匹配，副标题也含「所有评论」→ 点到「由新到旧」 |
