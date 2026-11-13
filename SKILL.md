@@ -5,6 +5,12 @@ description: 维护 Facebook 群组采集器（GraphQL 监听路线）。改代�
 
 # facebook_collector 维护指南
 
+## 本机指纹
+
+所有本机相关配置（profile 目录、代理、Chrome 路径、端口）都在项目根 `.env`，已被 git 忽略；模板见 `.env.example`。
+
+代码里**禁止**硬编码本机路径，统一走 `lib/config.env()`。
+
 ## 项目性质
 
 采集 Facebook 公开群组的帖子与互动数据。**只做被动监听**：不构造请求、不伪造参数、不改请求频率，只旁听页面自己发出的 `/api/graphql` 响应并落盘。

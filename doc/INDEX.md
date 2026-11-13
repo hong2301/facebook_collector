@@ -9,6 +9,7 @@
 | `code/` | 可执行代码 + 输入清单 `input.csv` | 数据、日志 |
 | `code/lib/` | 实现层，一个文件一个领域 | 业务流程编排 |
 | `data/raw/` | 接口原始响应（运行时产生，已 gitignore） | 整理后的交付文件 |
+| `.env` | 本机指纹（profile / 代理 / Chrome / 端口），已 gitignore | 提交 |
 | `doc/` | 设计与契约文档 | 代码 |
 | `logs/` | 运行日志（已 gitignore） | — |
 
@@ -25,7 +26,7 @@
 
 | 文件 | 职责 | 关键内容 |
 |---|---|---|
-| `code/lib/config.py` | 路径常量 | `ROOT` / `RAW_DIR` / `LOG_DIR` / `INPUT_FILE` / `LOGIN_COOKIE` |
+| `code/lib/config.py` | 路径常量 + `.env` 读取 | `ROOT` / `RAW_DIR` / `LOG_DIR` / `INPUT_FILE` / `LOGIN_COOKIE`；`env()` / `PROFILE_ROOT` / `PROXY` / `CHROME` / `DEFAULT_PORT` |
 | `code/lib/logger.py` | 双写日志 | `get_logger()` / `setup()`，控制台 + `logs/*.log` |
 | `code/lib/browser.py` | Chrome CDP 接管 | `attach(port)` / `wait_doc()` / `FB_PORT` / profile 路径 |
 | `code/lib/session.py` | 会话状态 | `open_port` / `pick_tab` / `get_tab` / `is_connected`，全局状态存 `_state` |

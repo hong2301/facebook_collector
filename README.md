@@ -72,8 +72,22 @@ open_port → use_tab → check_login
 - **停止条件**：监听数据里出现早于 `--since` 的帖子 / 连续 `--max-idle` 轮无新内容
 - **DOM 清理**：每 `prune_every` 轮删掉视口上方 `keep_screens` 屏以外的帖子节点，防止长列表卡顿
 
+## 配置（本机指纹）
+
+复制 `.env.example` 为 `.env` 并按本机情况填写，`.env` 不进版本库：
+
+```
+FB_PROFILE_ROOT=C:\Users\<you>\.pi\agent\browser-profile
+FB_PROFILE_NAME=fb
+FB_PROXY=http://127.0.0.1:7897
+FB_CHROME=C:\Program Files\Google\Chrome\Application\chrome.exe
+FB_PORT=9227
+```
+
+代码里不含本机路径，全部通过 `lib/config.env()` 读取。
+
 ## 运行前提
 
 - Chrome 以调试端口 `9227` 运行且已登录 Facebook
-- profile：`C:\Users\jiang\.pi\agent\browser-profile\fb`
+- profile：由 `.env` 的 `FB_PROFILE_ROOT` / `FB_PROFILE_NAME` 决定
 - 依赖：`DrissionPage`、Python 3.14
