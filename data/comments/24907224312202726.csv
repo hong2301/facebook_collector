@@ -1,9 +1,0 @@
-﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
-24907224312202726,24923235330601624,,0,Michael Lambert,"I put my Apple Watch on charge every night but in a different room to my bedroom where I charge my IPhone and I can hear any alarm from iphone no problem, so I believe removing watch disconnects it from the phone and all alarms come only from iPhone.",2025-09-24 23:09,0
-24907224312202726,24914740801451077,,0,Christine Benson,Have you checked your notification settings and enabled them?,2025-09-23 23:38,1
-24907224312202726,24914728128119011,,0,Christine Benson,"you need a third part app : Yes, you can view Freestyle Libre sensor readings on an Apple Watch using third-party apps like FLwatch, GlucoWatch, or Gluroo, which use data from the LibreLinkUp cloud or other methods to display your blood glucose levels on the watch. You will need to set up LibreLinkUp on your iPhone and may need to use an additional app or service to get the data to your watch. 
-Here's a general process to get Freestyle Libre readings on your Apple Watch: 
-Set up LibreLinkUp: You'll first need to set up a LibreLinkUp account and share your glucose data with it. 
-Use a Third-Party App: Download a compatible third-party app from the App Store, such as FLwatch, GlucoWatch, or others that are designed for this purpose. 
-Connect the App: Within the chosen third-party app, you will log in to your LibreLinkUp account to pull the glucose data. 
-View on Your Watch: Once connected, the app will display your blood glucose information directly on your Apple Watch, either through a dedicated app or by using complications on your watch face.",2025-09-23 23:36,0

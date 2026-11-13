@@ -1,3 +1,0 @@
-﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
-9343345669017175,9343377175680691,,0,Steve Kuckuk,The sensor itself has a memory that holds hours of data . . . When the signal is restored that data uploads from the sensor to the device . . . I think I read somewhere that the data has a capacity of about 6 hours.,2025-01-22 11:28,7
-9343345669017175,9343475372337538,,0,Brett Minkin,"It stores all the data in the sensor itself, and when signal is re-established, it downloads it to the meter/phone.",2025-01-22 11:53,4

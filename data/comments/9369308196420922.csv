@@ -1,6 +1,0 @@
-﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
-9369308196420922,9369553223063086,,0,Stephanie Maniatis,"If you use the phone app, and are using the Libre 2 or lower, you have to scan the sensor with the phone like you did to initiate it.",2025-01-27 06:45,1
-9369308196420922,9369446773073731,,0,Julian Chamizo,"the sensor does read yor levels every minute, other question is how often your data is sent to the reader or phone. and this depends on the model of the sensor.
-libre3 always does and if no signal lost, every minute your levels are updated.
-libre2 only does if you initiated the sensor with the phone, but you can also in case of signal lost to scan using NFC
-..",2025-01-27 06:13,0

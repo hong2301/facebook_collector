@@ -1,7 +1,0 @@
-﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
-9941392535879149,23953377997587367,,0,Asperger Autist,Ich setze sensor auch am oberschenkel da ich mitaweile kaum noch fett im oberarmen hab dank kraftsport und wenn der sensor im muskel landet dann au meine oberschenkel bestehen nur aus fett und knochen da beine gelaehmt ich habe den eindruck das wrrte genauer sind,2025-05-29 01:23,1
-9941392535879149,9948105421874527,,0,Wolfgang Sander,"373 ist ""Sensorfehler, In 10 min noch mal messen"", aber kein defekter Sensor.
-Sensor Fehler heisst nicht zwingend, daß der Sensor defekt ist.
-Die Meldung ""Sensor Fehler"" / ""in 10 Minuten noch mal messen"" der LibreLink App oder Lesegerät kommt, wenn implausible Werte gemessen wurden (z.b. schnelles Auf und Ab von Messwerten oder dauerhaft konstante Werte oder bei sehr steilem Anstieg/Abstieg von Werten) und diese Sensor- Werte nicht in BZ-Werte umgerechnet werden können. Zur Sicherheit wird der möglicherweise falsche Wert dann nicht angezeigt. Das ist quasi ein Sicherheitszustand
-Meistens fängt der Sensor sich wieder. Oder es kommt die Meldung ""Sensor ersetzen"" in LibreLink/Lesegerät.
-Abbott verlangt, wenigstens 3h in diesem Zustand zu bleiben, bis der Sensor getauscht werden darf und von Abbott ersetzt wird (man darf natürlich häufiger als alle 10min messen/scannen).",2025-04-28 23:58,1

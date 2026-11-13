@@ -1,6 +1,0 @@
-﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
-29182067561385025,29193932870198494,,0,Wolfgang Sander,"57 ist kein Fehlercode, sondern ein Ereignis wie App start/Bluetooth start.
-Fehler sind z.b. 373 oder 365 oder 366.",2026-10-22 21:51,0
-29182067561385025,29198294826428965,,0,Christoph Knorr,Meine funktionieren bis auf wenige Ausnahmen sehr gut.,2026-10-23 04:13,0
-29182067561385025,29200808296177618,,0,fslcsr123,"if u ever received this kind or error code, u can restart your phone and toggle the bluetooth. i tried it in mine and it works",2026-10-23 08:55,0
-29182067561385025,29200843996174048,,1,fslcsr123,u can try to rescan the sensor as well,2026-10-23 08:59,0

@@ -1,5 +1,0 @@
-﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
-9755202457831492,9768360899848981,,0,Wolfgang Sander,"1. Sensors can measure less accurately in the first 24 hours, even Abbott admits that. Many set a new sensor 12-24 hours before the old one expires, but only activate the new one when the old one expires. 
-2. 23% (percent!) deviations are allowed due to the tolerances of both devices. So 130vto 160 is still in range.
-3. Do you know if your bg meter is accurate?",2025-04-02 19:54,0
-9755202457831492,9768624113155993,,1,Ceij-Cathy Holmberg-Schrampfer,"Wolfgang Sander seems the only constant here is the BGM meter, so I was going to ask the same question. Seems people are so used to relying on BGM for so long that when they change to something new, it HAS to be the new that is wrong, not what they thought they could rely on historically.",2025-04-02 20:43,1
