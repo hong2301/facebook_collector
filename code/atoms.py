@@ -10,6 +10,7 @@
 """
 
 import csv
+import glob
 import json
 import os
 import time
@@ -17,10 +18,11 @@ import time
 from lib import session
 from lib.auth import is_logged_in
 from lib.browser import wait_doc
-from lib.config import RAW_DIR
+from lib.config import RAW_DIR, ROOT
 from lib.listener import GraphQLRecorder
 from lib.logger import get_logger
 from lib.scroll import at_bottom, scroll_once
+from lib import extract as extractlib
 from lib.comments import parse_response
 from lib.utils import pick_pause
 from lib import post as postlib
@@ -230,3 +232,29 @@ def _collect_parsed(recorder):
         for c in parse_response(raw):
             out[c["comment_id"]] = c
     return out
+
+
+def raw_to_posts(raw_dir=RAW_DIR, output=None):
+    """【原子】读取 feed 原始响应，输出帖子 JSON + 评论 CSV（零请求）。
+
+    每帖一份：posts/<post_id>.json、comments/<post_id>.csv，另附 index.csv。
+
+    Returns:
+        (帖子数, 评论数)
+    """
+    output = output or os.path.join(ROOT, "data", "posts")
+    posts, comments = {}, {}
+    files = sorted(glob.glob(os.path.join(raw_dir, "*.jsonl")))
+    if not files:
+        log.warning("没有可提取的 raw 文件：%s", raw_dir)
+        return 0, 0
+
+    for path in files:
+        for node in extractlib.iter_nodes(path):
+            rec = extractlib.post_record(node)
+            posts.setdefault(rec["post_id"], rec)
+            for c in extractlib.preview_comments(node):
+                comments.setdefault(c["comment_id"], c)
+
+    return extractlib.write_output(output, list(posts.values()),
+                                   list(comments.values()))

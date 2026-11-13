@@ -68,12 +68,19 @@ features.collect_posts(urls=None, input_file="code/input_posts.csv", start=0, en
                        output="data/posts", sort="all", max_comments=0, ...)
 ```
 
+```python
+features.build_posts_from_raw(raw_dir="data/raw", output="data/posts")  # 零请求整理
+features.plan_missing_posts(posts_dir="data/posts", out_file="code/input_posts.csv")
+```
+
 CLI：
 
 ```
 python code/features.py group [...]          # 小组主页
 python code/features.py post <url> [...]     # 单个帖子
-python code/features.py posts [url ...]      # 批量帖子（可读 code/input_posts.csv）
+python code/features.py posts [url ...]      # 批量帖子
+python code/features.py build                # raw → 帖子 JSON + 评论 CSV
+python code/features.py plan                 # 生成待补采清单
 ```
 
 `--resume`：`reload=False`，沿用当前页面位置继续滚，不重新加载。用于中断后续采。

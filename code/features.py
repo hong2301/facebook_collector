@@ -5,11 +5,15 @@
 | 采集小组主页帖子    | `collect_group_feed(...)`   | input_file / start / end / output / port / 采集参数 |
 | 采集单个帖子+评论   | `collect_post_url(...)`     | post_url / output / sort / max_comments / 等待参数 |
 | 批量采集帖子        | `collect_posts(...)`        | urls 或 input_file / start / end / output / 采集参数 |
+| 生成待补采清单      | `plan_missing_posts(...)`   | posts_dir / out_file / limit |
 
 参数属于功能本身，其它功能不共用。直接运行本文件即按默认参数执行。
 """
 
 import argparse
+import csv
+import glob
+import json
 import os
 import sys
 
@@ -165,6 +169,51 @@ def collect_posts(urls=None, input_file=None, start=0, end=0,
     return ok, fail
 
 
+
+def build_posts_from_raw(raw_dir=RAW_DIR, output=None):
+    """整理 raw → 帖子 JSON + 评论 CSV（批量，零请求）。"""
+    raw_dir = raw_dir or RAW_DIR
+    output = output or POSTS_OUTPUT_DIR
+    log.info("读取 raw：%s -> 输出：%s", raw_dir, output)
+    n_posts, n_cmts = atoms.raw_to_posts(raw_dir, output)
+    log.info("整理完成：帖子 %s，预览评论 %s", n_posts, n_cmts)
+    return n_posts, n_cmts
+
+
+def plan_missing_posts(posts_dir=None, out_file=None, limit=0):
+    """对比 comment_count 与已提取的预览评论数，输出需要补采的帖子清单。
+
+    清单写成 CSV（url,note），可直接喂给 collect_posts。
+    """
+    posts_dir = posts_dir or POSTS_OUTPUT_DIR
+    out_file = out_file or INPUT_POSTS_FILE
+    idle = full = 0
+    rows = []
+    for path in glob.glob(os.path.join(posts_dir, "posts", "*.json")):
+        with open(path, encoding="utf-8") as f:
+            d = json.load(f)
+        total = d.get("comment_count")
+        have = d.get("comment_collected") or 0
+        if not total:
+            idle += 1
+            continue
+        if have >= total:
+            full += 1
+            continue
+        rows.append((d["post_url"], total - have, d["post_time"]))
+
+    rows.sort(key=lambda r: -r[1])          # 待补多的先采
+    if limit:
+        rows = rows[:limit]
+    with open(out_file, "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["url", "note"])
+        for url, need, ts in rows:
+            w.writerow([url, f"missing={need} {ts}"])
+
+    log.info("零评论帖 %s | 预览已覆盖 %s | 待补采 %s（写入 %s）",
+             idle, full, len(rows), out_file)
+    return len(rows)
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Facebook 采集功能")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -226,6 +275,17 @@ def main(argv=None):
     b.add_argument("--prune-keep", type=int, default=40)
     b.add_argument("-q", "--quiet", action="store_true")
 
+    bd = sub.add_parser("build", help="整理 raw → 帖子 JSON + 评论 CSV")
+    bd.add_argument("--raw-dir", default=RAW_DIR)
+    bd.add_argument("-o", "--output", default=POSTS_OUTPUT_DIR)
+    bd.add_argument("-q", "--quiet", action="store_true")
+
+    m = sub.add_parser("plan", help="生成待补采帖子清单")
+    m.add_argument("--posts-dir", default=POSTS_OUTPUT_DIR)
+    m.add_argument("-o", "--out-file", default=INPUT_POSTS_FILE)
+    m.add_argument("--limit", type=int, default=0, help="0=全部")
+    m.add_argument("-q", "--quiet", action="store_true")
+
     a = ap.parse_args(argv)
     setup(quiet=a.quiet)
     params = {k: v for k, v in vars(a).items() if k not in ("cmd", "quiet")}
@@ -233,6 +293,10 @@ def main(argv=None):
         collect_group_feed(**params)
     elif a.cmd == "post":
         collect_post_url(**params)
+    elif a.cmd == "build":
+        build_posts_from_raw(**params)
+    elif a.cmd == "plan":
+        plan_missing_posts(**params)
     else:
         collect_posts(**params)
 
