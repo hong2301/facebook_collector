@@ -4,6 +4,7 @@
 |------------------|-----------------------------|------|
 | 采集小组主页帖子    | `collect_group_feed(...)`   | input_file / start / end / output / port / 采集参数 |
 | 采集单个帖子+评论   | `collect_post_url(...)`     | post_url / output / sort / max_comments / 等待参数 |
+| 批量采集帖子        | `collect_posts(...)`        | urls 或 input_file / start / end / output / 采集参数 |
 
 参数属于功能本身，其它功能不共用。直接运行本文件即按默认参数执行。
 """
@@ -13,11 +14,14 @@ import os
 import sys
 
 import atoms
-from lib.config import INPUT_FILE, RAW_DIR, ROOT
+from lib.config import CODE_DIR, INPUT_FILE, RAW_DIR, ROOT
 from lib.logger import get_logger, setup
 from lib.utils import read_input
 
 log = get_logger("collector")
+
+INPUT_POSTS_FILE = os.path.join(CODE_DIR, "input_posts.csv")
+POSTS_OUTPUT_DIR = os.path.join(ROOT, "data", "posts")
 
 
 def collect_group_feed(input_file=INPUT_FILE, start=0, end=0, output=RAW_DIR,
@@ -105,6 +109,62 @@ def collect_post_url(post_url, output=RAW_DIR, sort="all", max_comments=0,
         max_idle=max_idle, max_rounds=max_rounds, prune_keep=prune_keep)
 
 
+
+def collect_posts(urls=None, input_file=None, start=0, end=0,
+                  output=None, port=9227, sort="all", max_comments=0,
+                  pause_min=1.0, pause_max=3.0,
+                  scroll_pause_min=1.0, scroll_pause_max=3.0,
+                  max_idle=6, max_rounds=500, prune_keep=40):
+    """批量采集帖子：链接来自命令行或清单文件（CSV 的 url 列）。
+
+    Returns:
+        (成功数, 失败数)
+    """
+    output = output or POSTS_OUTPUT_DIR
+    if urls:
+        links = list(urls)
+    else:
+        try:
+            links = read_input(input_file or INPUT_POSTS_FILE)
+        except OSError as exc:
+            log.error("读取帖子清单失败：%s", exc)
+            return 0, 0
+
+    links = links[start:end] if end > 0 else links[start:]
+    if not links:
+        log.error("没有可用的帖子链接（总计 %s 条，切片 [%s:%s]）",
+                  len(urls or []), start, end or "末尾")
+        return 0, 0
+
+    os.makedirs(output, exist_ok=True)
+    log.info("端口=%s 输出=%s 帖子=%s 排序=%s 评论上限=%s",
+             port, output, len(links), sort, max_comments or "不限")
+
+    atoms.open_port(port)
+    if not atoms.check_login():
+        return 0, len(links)
+
+    ok = fail = 0
+    for i, url in enumerate(links, 1):
+        log.info("帖子 %s/%s：%s", i, len(links), url)
+        try:
+            atoms.collect_post(
+                url, output, sort=sort, max_comments=max_comments,
+                pause_min=pause_min, pause_max=pause_max,
+                scroll_pause_min=scroll_pause_min, scroll_pause_max=scroll_pause_max,
+                max_idle=max_idle, max_rounds=max_rounds, prune_keep=prune_keep)
+            ok += 1
+        except KeyboardInterrupt:
+            log.warning("用户中断，停止后续帖子")
+            break
+        except Exception:
+            log.exception("帖子采集失败：%s", url)
+            fail += 1
+
+    log.info("全部完成：成功 %s，失败 %s", ok, fail)
+    return ok, fail
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Facebook 采集功能")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -146,13 +206,35 @@ def main(argv=None):
                    help="保留最近的评论节点数")
     p.add_argument("-q", "--quiet", action="store_true")
 
+    b = sub.add_parser("posts", help="批量采集帖子 + 评论")
+    b.add_argument("urls", nargs="*", help="帖子链接，可多个；留空则读清单文件")
+    b.add_argument("-i", "--input-file", default=INPUT_POSTS_FILE,
+                   help="帖子清单 CSV（url 列）")
+    b.add_argument("--start", type=int, default=0)
+    b.add_argument("--end", type=int, default=0, help="0=末尾")
+    b.add_argument("-o", "--output", default=POSTS_OUTPUT_DIR)
+    b.add_argument("--port", type=int, default=9227)
+    b.add_argument("--sort", default="all",
+                   choices=["most_relevant", "newest", "all"])
+    b.add_argument("--max-comments", type=int, default=0, help="0=不限")
+    b.add_argument("--pause-min", type=float, default=1.0)
+    b.add_argument("--pause-max", type=float, default=3.0)
+    b.add_argument("--scroll-pause-min", type=float, default=1.0)
+    b.add_argument("--scroll-pause-max", type=float, default=3.0)
+    b.add_argument("--max-idle", type=int, default=6)
+    b.add_argument("--max-rounds", type=int, default=500)
+    b.add_argument("--prune-keep", type=int, default=40)
+    b.add_argument("-q", "--quiet", action="store_true")
+
     a = ap.parse_args(argv)
     setup(quiet=a.quiet)
     params = {k: v for k, v in vars(a).items() if k not in ("cmd", "quiet")}
     if a.cmd == "group":
         collect_group_feed(**params)
-    else:
+    elif a.cmd == "post":
         collect_post_url(**params)
+    else:
+        collect_posts(**params)
 
 
 if __name__ == "__main__":

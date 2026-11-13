@@ -63,7 +63,18 @@ features.collect_post_url(post_url, output, sort="all", max_comments=0,
                           max_idle=6, max_rounds=500, prune_keep=40)
 ```
 
-CLI：`python code/features.py group [...]` / `python code/features.py post <url> [...]`
+```python
+features.collect_posts(urls=None, input_file="code/input_posts.csv", start=0, end=0,
+                       output="data/posts", sort="all", max_comments=0, ...)
+```
+
+CLI：
+
+```
+python code/features.py group [...]          # 小组主页
+python code/features.py post <url> [...]     # 单个帖子
+python code/features.py posts [url ...]      # 批量帖子（可读 code/input_posts.csv）
+```
 
 `--resume`：`reload=False`，沿用当前页面位置继续滚，不重新加载。用于中断后续采。
 

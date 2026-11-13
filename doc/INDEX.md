@@ -20,7 +20,7 @@
 | 文件 | 职责 | 关键内容 |
 |---|---|---|
 | `code/atoms.py` | **原子层**（最小可执行单元） | 小组：`open_port` / `check_login` / `collect_group_posts`<br>帖子：`collect_post(post_url, output, sort, max_comments, ...)` |
-| `code/features.py` | **功能层**（原子组合 + 功能参数 + CLI） | `collect_group_feed(...)`（主页）<br>`collect_post_url(...)`（帖子+评论） |
+| `code/features.py` | **功能层**（原子组合 + 功能参数 + CLI） | `collect_group_feed(...)`（主页）<br>`collect_post_url(...)`（单帖+评论）<br>`collect_posts(...)`（批量帖子） |
 
 ### 实现层 `code/lib/`
 
@@ -84,7 +84,15 @@ python code/features.py group --resume         # 接续：不重新加载
 
 # 采集单个帖子 + 完整评论
 python code/features.py post <帖子链接> --sort all
-python code/features.py post <帖子链接> --sort all --max-comments 100   --scroll-pause-min 1.5 --scroll-pause-max 3 --pause-min 1.5 --pause-max 3
+
+# 批量采集帖子（读 code/input_posts.csv 或直接给链接）
+python code/features.py posts
+python code/features.py posts <url1> <url2> --max-comments 100
+python code/features.py post <帖子链接> --sort all
+
+# 批量采集帖子（读 code/input_posts.csv 或直接给链接）
+python code/features.py posts
+python code/features.py posts <url1> <url2> --max-comments 100 --max-comments 100   --scroll-pause-min 1.5 --scroll-pause-max 3 --pause-min 1.5 --pause-max 3
 
 # 或在代码里组合原子动作
 python -c "import sys; sys.path.insert(0,'code'); import index; atoms.open_port(9227); atoms.check_login()"
