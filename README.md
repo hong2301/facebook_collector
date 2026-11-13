@@ -39,7 +39,10 @@ facebook_collector/
 │       ├── post.py       帖子页：正文提取 / 评论排序 / 展开 / 清理
 │       ├── comments.py   评论解析（顶层 + 回复）
 │       └── utils.py      输入清单 / 切片 / 停顿
-├── data/raw/           接口原始响应（一请求一文件）+ index.csv
+├── data/
+│   ├── raw/            所有接口原始响应 + index.csv（type 区分 feed/评论）
+│   ├── posts/          每帖一个 JSON
+│   └── comments/       每帖一个评论 CSV
 ├── doc/               细分文档（索引 / 接口 / 字段 / URL 参数 / 已知问题）
 └── logs/              运行日志
 ```

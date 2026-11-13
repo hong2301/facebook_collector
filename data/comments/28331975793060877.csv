@@ -1,0 +1,12 @@
+﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
+28331975793060877,28332005839724539,,0,Jillena Ellis Wheelock,Mine will do that from time to time I leave it alone for 24 hours and it will start working right again.  Sometimes I believe it takes that long to calibrate.,2026-08-20 04:11,2
+28331975793060877,28332814992976957,,0,Wolfgang Sander,"Tap on the ""I"" icon, ""Sensor error"" does not automatically mean that  the sensor is defect.
+The message ""Sensor error"" / ""measure again in 10 minutes"" comes because implausible values have been measured (e.g. rapid up and down of measured values or with a very steep rise / fall in values), Libre app/reader then cannot convert the confusing raw sensor value into a blood glucose value. For security then the possibly false value is not displayed. It's like a safety state. 
+
+Some sensors also deliver very discontinuous values at the beginning, which Libre app/reader then leads on to safety state ""measure again in 10 minutes"".
+Be patient and wait and measure/scan with Libre app also every few minutes.
+
+Abbott requires that you remain in this state for at least 3 hours before the sensor can be exchanged and replaced by Abbott (of course you can measure/scan more often than every 10 minutes).
+
+To prevent this problem one can usually place a new sensor 24 hours before the old one stops but do not activate it.
+Start new sensor with Libre app or reader after the old sensor stopped. Like this Libre app usually works from the start.",2026-08-20 06:00,2

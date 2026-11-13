@@ -1,0 +1,3 @@
+﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
+26449788807946261,26451223637802778,,0,Brian Hawken,"the sensor sends info to the app via nfc and bluetooth, not wifi.  you lose signal because the phone with the app on it is too far away from the sensor.",2026-03-12 15:06,5
+26449788807946261,26453348044257004,,0,Lisa Renee Ford,"Yes.  We were without power for 10 days during the ice storm in Tennessee. My sensor was fine, as long as you don't turn off bluetooth wifi doesn't matter.",2026-03-12 20:17,1

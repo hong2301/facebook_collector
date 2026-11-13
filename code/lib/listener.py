@@ -24,9 +24,8 @@ from .config import RAW_DIR
 from .logger import get_logger
 
 log = get_logger("listener")
-INDEX_FIELDS = ["seq", "ts", "group", "doc_id", "resp_bytes", "n_posts", "post_ids",
-                "min_ts", "max_ts", "end_cursor_len", "has_next",
-                "friendly_name", "file"]
+INDEX_FIELDS = ["seq", "file", "ts", "group", "doc_id", "type",
+                "bytes", "n_posts", "min_ts", "max_ts"]
 
 # 只关心真实数据接口，过滤埋点/配置类
 SKIP_DOCS = {
@@ -145,42 +144,34 @@ class GraphQLRecorder(threading.Thread):
         raw = p.response.raw_body or ""
         if not raw or len(raw) < 500:
             return
-        friendly = ""
-        fm = re.search(r"fb_api_req_friendly_name=([^&]+)", pd)
-        if fm:
-            friendly = fm.group(1)
 
-        lines = raw.split("\n")
-        tree = parse_body_tree(lines)
-        gf = ((tree.get("node") or {}).get("group_feed") or {})
-        edges = gf.get("edges") or []
-        post_ids = []
+        tree = parse_body_tree(raw.split(chr(10)))
+        root = tree.get("node") or {}
+        if isinstance(root.get("group_feed"), dict):
+            rtype = "feed"
+            edges = root["group_feed"].get("edges") or []
+        elif isinstance(root.get("replies_connection"), dict):
+            rtype = "comments_reply"
+            edges = root["replies_connection"].get("edges") or []
+        elif isinstance(root.get("comment_rendering_instance_for_feed_location"), dict):
+            rtype = "comments_top"
+            edges = ((root["comment_rendering_instance_for_feed_location"]
+                      .get("comments") or {}).get("edges") or [])
+        else:
+            rtype = "other"
+            edges = []
+
+        if self.feed_only and rtype != "feed":
+            return
+
         times = []
         for e in edges:
-            n = (e or {}).get("node") or {}
-            if n.get("post_id"):
-                post_ids.append(str(n["post_id"]))
-            ct = n.get("creation_time")
+            node = (e or {}).get("node") or {}
+            ct = node.get("creation_time") or node.get("created_time")
             if ct:
                 try:
                     times.append(int(ct))
                 except (TypeError, ValueError):
-                    pass
-
-        # 默认只保留 feed 响应；帖子页采集时 feed_only=False
-        if not post_ids and self.feed_only:
-            return
-
-        end_cursor = ""
-        has_next = ""
-        for ln in lines:
-            if "$page_info" in ln:
-                try:
-                    o = json.loads(ln)
-                    pi = (o.get("data") or {}).get("page_info") or {}
-                    end_cursor = pi.get("end_cursor") or ""
-                    has_next = pi.get("has_next_page")
-                except Exception:
                     pass
 
         self.seq += 1
@@ -190,16 +181,17 @@ class GraphQLRecorder(threading.Thread):
             f.write(raw)
 
         rec = {
-            "seq": self.seq, "ts": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "group": self.group,
-            "doc_id": doc, "resp_bytes": len(raw), "n_posts": len(post_ids),
-            "post_ids": ";".join(post_ids),
+            "seq": self.seq, "file": fn,
+            "ts": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "group": self.group, "doc_id": doc, "type": rtype,
+            "bytes": len(raw), "n_posts": len(edges),
             "min_ts": min(times) if times else "",
             "max_ts": max(times) if times else "",
-            "end_cursor_len": len(end_cursor), "has_next": has_next,
-            "friendly_name": friendly, "file": fn,
         }
         self.records.append(rec)
+        self._append_index(rec)
+
+    def _append_index(self, rec):
         new = not os.path.exists(self.index_csv)
         with open(self.index_csv, "a", encoding="utf-8-sig", newline="") as f:
             w = csv.DictWriter(f, INDEX_FIELDS)

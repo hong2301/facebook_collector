@@ -1,0 +1,17 @@
+﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
+24907544738837350,24907786768813147,,0,Gene Holcombe,"A1C vs GMI: Understanding the Difference
+A1C is a lab test that measures your average blood sugar over the past 2-3 months by looking at the amount of glycated hemoglobin in your red blood cells. On the other hand, GMI (glucose management indicator) is calculated from your CGM data and gives your average blood sugar over a shorter period, usually about 2 weeks or 1 month.
+While A1C provides a long-term snapshot, GMI offers a more dynamic look at your recent glucose management. GMI is calculated differently than A1C - it uses your CGM data to estimate your average glucose level based on the percentage of time spent in different ranges. GMI is reported in the same units as blood glucose (mg/dL or mmol/L) rather than as a percentage like A1C.
+GMI offers the advantage of being updated more frequently using CGM data, while A1C requires periodic lab draws. However, A1C is considered the gold standard and a more standardized measurement, while GMI provides more short-term insights.
+In general, a GMI of around 154 mg/dL equates to an A1C of around 7%. Comparing GMI and A1C can reveal whether glucose control has been steady or more erratic at different time frames:
+ • If GMI is lower than estimated by A1C, it suggests blood sugars have improved and dropped in the more recent 1-2 month period captured by GMI.
+ • If GMI is higher than expected from the A1C, it may indicate blood sugars have been running higher in the past few weeks.
+ • A large discrepancy between GMI and A1C could indicate high glucose variability with frequent swings in highs and lows.
+ • Similar values between the two suggest stable, consistent blood glucose levels over both the short and long-term.",2025-09-23 03:20,5
+24907544738837350,24907616388830185,,0,Wolfgang Sander,"Tap on the ""i"" icon.
+Read the manual.
+Get a training.",2025-09-23 02:52,3
+24907544738837350,24907631762161981,,0,Ronald Murchison,Mine is 6.0,2025-09-23 02:55,0
+24907544738837350,24907894568802367,,1,Pat Pelletier,Gene Holcombe thank you so much for detailed reply.,2025-09-23 03:38,0
+24907544738837350,24909907291934428,,0,Abby Kyriakoutsakos Marrazzo,"It’s similar, except an A1c  measures directly from hemoglobin. The GMI is almost like the lab test estimated average glucose, which would give numbers based on the what the A1c calculates to in glucose numbers. It’s just that the sensor doesn’t measure blood.",2025-09-23 09:56,0
+24907544738837350,24917639347827889,,0,Wanda Wilson Dooley,"It's similar but A1c is a blood test and GMI averages the sensor results from interstitial fluid. This info is in the literature that comes in the box with the sensor, and if you tap the little i on the app, you can read about it there, too.",2025-09-24 07:43,0

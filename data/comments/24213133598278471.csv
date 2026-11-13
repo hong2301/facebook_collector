@@ -1,0 +1,9 @@
+﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
+24213133598278471,24219484200976744,,0,Daniele Formica,Io condivido l'app con mio fratello. Lui ha un app identica alla mia per controllare la glicemia. Quello che ha il sensore sono io,2025-07-02 00:09,0
+24213133598278471,24218649551060209,,0,Patrick Xjr,"Buongiono
+The most simple you use libreview on your main phone. (The one linked with the sensor) and for the second phone you use librelinkUp (app to be installed)
+In libreview you need to go to “connected app” and give the email address 
+Then on your second phone you have a repeater..
+Be careful this works only if you have a connection",2025-07-01 21:57,0
+24213133598278471,24218693547722476,,1,Michele Gardin,"Patrick Xjr  facendo così, riesco a scannerizzare lo stesso sensore con il secondo telefono ? In maniera che i dati del secondo telefono vengono caricati su libreview?",2025-07-01 22:04,0
+24213133598278471,24219709887620842,,1,Michele Gardin,Daniele Formica  riesci a scansionare il sensore con app di tuo fratello? I dati si sincronizzano con libreview? A me non interessa app librelinkup  per condividere i miei dati ma avere due app librelink per scansionare un sensore con lo stesso account su due telefoni diversi mi sveglio la mattina spengo il cel e ne uso un altro per scansionarlo e la sera quando torno a casa faccio il contrario divido cel casa e lavoro.. se riesci mi indichi la procedura?,2025-07-02 00:41,0

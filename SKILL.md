@@ -145,9 +145,17 @@ open_port → check_login
 ## 数据契约
 
 ```
-data/raw/<seq>_<YYYYmmdd-HHMMSS>_<doc_id>.jsonl   原始响应，JSONL，不改写
-data/raw/index.csv                                每行一个响应
+data/
+├── raw/                   所有接口原始响应（feed 与评论同目录，靠内容区分）
+│   ├── <seq>_<ts>_<doc_id>.jsonl
+│   └── index.csv          所有响应汇总，type 字段区分类型
+├── posts/<post_id>.json
+└── comments/<post_id>.csv
 ```
+
+`index.csv` 列：`seq,file,ts,group,doc_id,type,bytes,n_posts,min_ts,max_ts`
+
+`type` 取值：`feed` / `comments_top` / `comments_reply` / `other`，由响应体内是否存在 `group_feed`、`comment_rendering_instance_for_feed_location`、`replies_connection` 判定。
 
 `index.csv` 列：`seq,ts,group,doc_id,resp_bytes,n_posts,post_ids,min_ts,max_ts,end_cursor_len,has_next,friendly_name,file`
 

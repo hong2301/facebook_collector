@@ -8,7 +8,9 @@
 |---|---|---|
 | `code/` | 可执行代码 + 输入清单 `input.csv` | 数据、日志 |
 | `code/lib/` | 实现层，一个文件一个领域 | 业务流程编排 |
-| `data/raw/` | 接口原始响应（运行时产生，已 gitignore） | 整理后的交付文件 |
+| `data/raw/` | 所有接口原始响应 + 一份 index.csv（已 gitignore） | 整理后的数据 |
+| `data/posts/` | 每帖一个 JSON | 原始响应 |
+| `data/comments/` | 每帖一个评论 CSV | 原始响应 |
 | `.env` | 本机指纹（profile / 代理 / Chrome / 端口），已 gitignore | 提交 |
 | `doc/` | 设计与契约文档 | 代码 |
 | `logs/` | 运行日志（已 gitignore） | — |

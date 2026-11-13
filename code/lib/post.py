@@ -450,10 +450,10 @@ def _read_existing_doc(path):
         return {}
 
 
-def save_result(output, post_id, post_url, base, comments):
+def save_result(posts_dir, post_id, post_url, base, comments):
     """保存帖子 JSON 与评论 CSV（与已有数据合并，不覆盖丢失）。"""
-    posts_dir = os.path.join(output, "posts")
-    cmts_dir = os.path.join(output, "comments")
+    from .config import COMMENTS_DIR
+    cmts_dir = COMMENTS_DIR
     os.makedirs(posts_dir, exist_ok=True)
     os.makedirs(cmts_dir, exist_ok=True)
 

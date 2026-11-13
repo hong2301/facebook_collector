@@ -129,18 +129,16 @@ def preview_comments(node):
     return out
 
 
-def write_output(output, posts, comments):
-    """写 posts/<pid>.json + comments/<pid>.csv + index.csv。"""
-    posts_dir = os.path.join(output, "posts")
-    cmts_dir = os.path.join(output, "comments")
+def write_output(posts_dir, comments_dir, posts, comments):
+    """写 <posts_dir>/<pid>.json 与 <comments_dir>/<pid>.csv（不写索引）。"""
+    cmts_dir = comments_dir
     os.makedirs(posts_dir, exist_ok=True)
-    os.makedirs(cmts_dir, exist_ok=True)
+    os.makedirs(comments_dir, exist_ok=True)
 
     by_post = {}
     for c in comments:
         by_post.setdefault(c["post_id"], []).append(c)
 
-    index_rows = []
     for rec in posts:
         pid = rec["post_id"]
         rows = by_post.get(pid, [])
@@ -160,25 +158,20 @@ def write_output(output, posts, comments):
         doc["fetched_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
         with open(path, "w", encoding="utf-8") as f:
             json.dump(doc, f, ensure_ascii=False, indent=2)
-        with open(os.path.join(cmts_dir, pid + ".csv"), "w",
-                  encoding="utf-8-sig", newline="") as f:
+        # 与已有评论合并，避免覆盖已采集的完整评论
+        merged = {}
+        cpath = os.path.join(cmts_dir, pid + ".csv")
+        if os.path.exists(cpath):
+            with open(cpath, encoding="utf-8-sig", newline="") as f:
+                for r in csv.DictReader(f):
+                    if r.get("comment_id"):
+                        merged[r["comment_id"]] = r
+        for c in rows:
+            merged.setdefault(c["comment_id"], {k: c.get(k, "") for k in COMMENT_FIELDS})
+        with open(cpath, "w", encoding="utf-8-sig", newline="") as f:
             w = csv.DictWriter(f, COMMENT_FIELDS)
             w.writeheader()
-            for c in rows:
+            for c in merged.values():
                 w.writerow({k: c.get(k, "") for k in COMMENT_FIELDS})
-        index_rows.append({
-            "post_id": pid, "post_time": rec["post_time"],
-            "author": rec["author"], "like_count": rec["like_count"],
-            "comment_count": rec["comment_count"],
-            "share_count": rec["share_count"],
-            "has_image": rec["has_image"], "has_video": rec["has_video"],
-            "text_len": len(rec["text"]), "comment_collected": len(rows),
-            "post_url": rec["post_url"],
-        })
-
-    with open(os.path.join(output, "index.csv"), "w",
-              encoding="utf-8-sig", newline="") as f:
-        w = csv.DictWriter(f, INDEX_FIELDS)
-        w.writeheader()
-        w.writerows(index_rows)
+        doc["comment_collected"] = max(doc.get("comment_collected") or 0, len(merged))
     return len(posts), len(comments)

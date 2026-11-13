@@ -1,0 +1,15 @@
+﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
+25426993453559140,25427277563530729,,0,Patrick Xjr,"La liaison Bluetooth peut être coupée par le capteur (défaillant) ou par le téléphone.
+Vérification capteur = pas possible
+Vérification téléphone:
+Éteindre le téléphone
+Attendre 10 secondes 
+Redémarrer le téléphone.
+Relancer libreview.
+Dans la page accueil voir si « ! » rouge sur icône menu.
+Scanner une fois le capteur et attendre en regardant si le ! Rouge disparaît.
+Si il disparaît c’est ok cela fonctionne.
+S’il ne disparaît pas, a 5mn il faut rescanner (erreur).
+Combien avez dapplis utilisant le Bluetooth simultanément ?",2025-11-15 20:00,1
+25426993453559140,25427132210211931,,0,Patrick Xjr,"Bonjour
+Quel est votre téléphone?",2025-11-15 19:34,0

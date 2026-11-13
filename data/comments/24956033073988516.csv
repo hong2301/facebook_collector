@@ -1,0 +1,5 @@
+﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
+24956033073988516,24957415000516990,,0,Tanja Weber,"Und falls du da z.b. noch im Bett gelegen hast und auf dem Sensor gelegen hast, ist es auch normal, dass der Sensorwert abfällt",2025-09-28 19:38,1
+24956033073988516,24957409713850852,,0,Tanja Weber,Hattest du kurz vorher was gegessen? Der Sensor misst den Zucker ja immer mit einer Verzögerung von ca 20 Minuten.,2025-09-28 19:38,1
+24956033073988516,24965132156411941,,1,Birgit Bader,"Tanja Weber nein, das war die Messung vor dem Mittagessen",2025-09-29 18:00,0
+24956033073988516,24965141559744334,,1,Birgit Bader,Tanja Weber Oder das Ding gar nicht mehr misst wie heute Nacht. Also ich kann den Libre 3 nicht mehr empfehlen.,2025-09-29 18:02,1

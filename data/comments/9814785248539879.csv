@@ -1,0 +1,4 @@
+﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
+9814785248539879,9816412268377177,,0,Wolfgang Sander,"Sind es denn echte Hypos, blutig gegengecheckt? Oder nur compression lows?
+Und ja, die Meldung ""Sensor Fehler"" / ""in 10 Minuten noch mal messen"" der LibreLink App/Lesegerät kommt, wenn implausible Werte gemessen wurden (z.b. schnelles Auf und Ab von Messwerten oder bei sehr steilem Anstieg/Abstieg von Werten) und diese Sensor- Werte nicht in BZ-Werte umgerechnet werden können. Zur Sicherheit wird der möglicherweise falsche Wert dann nicht angezeigt. Das ist quasi ein Sicherheitszustand
+Und die Hypos sollten doch auch im Protokoll oder TIR auftauchen!",2025-04-09 19:32,0

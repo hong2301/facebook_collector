@@ -1,0 +1,4 @@
+﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
+9367026509982424,9368258423192566,,0,Wolfgang Sander,"1. Sensors can measure less accurately in the first 24 hours, even Abbott admits that. Many set a new sensor 12-24 hours before the old one expires, but only activate the new one when the old one expires. 
+2. Later 23% deviations are allowed due to the tolerances of both devices.",2025-01-27 00:48,0
+9367026509982424,9370310569654018,,0,Barrie Linch,"I'm not sure what's going on because most glucometers and Libre only display down to 2.2. Below that, they just say LO.",2025-01-27 10:32,0

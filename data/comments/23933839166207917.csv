@@ -1,0 +1,28 @@
+﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
+23933839166207917,23938496615742172,,0,Dalm Riv,"Aquí hay algunas opciones y consideraciones para ayudarte:
+ * Compartir datos a través de la aplicación FreeStyle LibreLink:
+   * La aplicación FreeStyle LibreLink (que es la aplicación oficial para el sensor FreeStyle Libre 2 Plus) tiene una función de ""conectividad"" o ""compartir"" datos.
+   * Si tu hijo usa la aplicación LibreLink para escanear su sensor, él puede configurarla para compartir los datos de forma automática con tu teléfono (a través de tu propia aplicación LibreLink o con la aplicación LibreView).
+   * Necesitarías que tanto tu hijo como tú tengan una cuenta FreeStyle Libre y que él te invite a compartir sus datos. Una vez configurado, podrás ver sus lecturas de glucosa en tiempo real (o casi en tiempo real, dependiendo de la sincronización) y su historial.
+   * Es importante verificar si la aplicación ""Juggluco"" que mencionas es compatible con esta función de compartir datos directamente con la aplicación oficial de FreeStyle Libre o con LibreView. Algunas aplicaciones de terceros no siempre tienen integraciones directas con las plataformas de monitoreo oficiales para compartir en tiempo real con otras personas.
+ * Uso de la aplicación LibreView:
+   * LibreView es una plataforma basada en la nube de Abbott (los fabricantes de FreeStyle Libre). Los datos de la aplicación FreeStyle LibreLink se pueden sincronizar automáticamente con LibreView.
+   * Una vez que los datos de tu hijo estén en LibreView, tú puedes acceder a ellos iniciando sesión en tu propia cuenta LibreView (si tu hijo te ha dado acceso o si su cuenta está vinculada a la tuya). Esto te permitiría ver informes y el historial de glucosa.
+   * De nuevo, la clave aquí es que la aplicación ""Juggluco"" que está usando tu hijo permita la exportación o sincronización de datos con la plataforma LibreView o una manera de compartir directamente.
+ * Investigar las funcionalidades de ""Juggluco"":
+   * Dado que mencionas ""Juggluco"", es crucial que revises las opciones de esa aplicación específica. Algunas aplicaciones de terceros ofrecen sus propias soluciones para compartir datos (por ejemplo, a través de un sitio web, una nube privada o enviando notificaciones).
+   * Busca en la configuración de Juggluco si hay opciones para:
+     * ""Compartir datos""
+     * ""Exportar datos""
+     * ""Monitoreo remoto""
+     * ""Integración con otras plataformas""
+   * Podría ser que necesites que tu hijo use la aplicación oficial FreeStyle LibreLink en lugar de Juggluco para acceder a las funciones de compartir datos oficiales.
+ * Dispositivos de monitoreo remoto adicionales (si aplica):
+   * Algunos sistemas CGM (Continuous Glucose Monitoring) tienen receptores o transmisores adicionales que pueden enviar los datos a la nube o a un segundo dispositivo. Sin embargo, para el FreeStyle Libre 2 Plus, la forma principal de ver los datos es a través de la aplicación en el teléfono o el lector. El compartir datos se hace principalmente a través de la funcionalidad de la aplicación.
+Recomendaciones clave:
+ * Verifica la aplicación oficial FreeStyle LibreLink: Lo primero que debes hacer es asegurarte de que tu hijo esté usando la aplicación oficial ""FreeStyle LibreLink"" para escanear su sensor, ya que esta es la que ofrece las funciones de compartir datos de forma nativa a través de LibreView.
+ * Configura el intercambio de datos en LibreLink: Si está usando LibreLink, pídale que vaya a la configuración dentro de la aplicación y busque la opción para ""Compartir con un familiar"" o similar. Deberá enviarte una invitación.
+ * Consulta el soporte de Abbott o FreeStyle Libre: Si tienes dificultades para configurar el intercambio de datos, no dudes en contactar directamente con el soporte técnico de FreeStyle Libre en tu país. Ellos te pueden guiar paso a paso.
+ * Considera el uso exclusivo de la aplicación oficial: Aunque Juggluco puede ofrecer funcionalidades personalizadas, para un monitoreo remoto fiable y respaldado por el fabricante, la aplicación oficial FreeStyle LibreLink y la plataforma LibreView son las más adecuadas y diseñadas para ello.
+Espero que esto te ayude a encontrar una solución para poder monitorear a tu hijo desde casa. ¡Mucha suerte!",2025-05-27 00:06,1
+23933839166207917,23937238785867955,,0,Estibenylucia Escudero Perez,Si lo que necesito es poder visualizar esas glucosas en mi teléfono tambien,2025-05-26 20:10,0

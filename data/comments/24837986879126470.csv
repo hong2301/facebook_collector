@@ -1,0 +1,6 @@
+﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
+24837986879126470,24848018268123331,,0,Eric Skovan,"It initially uses NFC when you first scan it, then it uses Bluetooth to remain connected.
+
+WiFi never enters into it. Unless you use LibreLinkUp to send the readings to another app or to an Apple Watch. Though cellular data should still work for that.",2025-09-15 21:16,1
+24837986879126470,24838394729085685,,0,Scotia Draven,"It uses bluetooth to connect to your phone, so you should be fine.",2025-09-14 15:36,3
+24837986879126470,24843806005211224,,0,Bill Henderson,Yes,2025-09-15 07:29,0

@@ -187,9 +187,9 @@ def plan_missing_posts(posts_dir=None, out_file=None, limit=0):
     """
     posts_dir = posts_dir or POSTS_OUTPUT_DIR
     out_file = out_file or INPUT_POSTS_FILE
-    idle = full = 0
+    idle = full = done = 0
     rows = []
-    for path in glob.glob(os.path.join(posts_dir, "posts", "*.json")):
+    for path in glob.glob(os.path.join(posts_dir, "*.json")):
         with open(path, encoding="utf-8") as f:
             d = json.load(f)
         total = d.get("comment_count")
@@ -199,6 +199,10 @@ def plan_missing_posts(posts_dir=None, out_file=None, limit=0):
             continue
         if have >= total:
             full += 1
+            continue
+        # 已开页采过（评论数超过预览上限 2）的不再重复
+        if have > 2:
+            done += 1
             continue
         rows.append((d["post_url"], total - have, d["post_time"]))
 
@@ -211,8 +215,8 @@ def plan_missing_posts(posts_dir=None, out_file=None, limit=0):
         for url, need, ts in rows:
             w.writerow([url, f"missing={need} {ts}"])
 
-    log.info("零评论帖 %s | 预览已覆盖 %s | 待补采 %s（写入 %s）",
-             idle, full, len(rows), out_file)
+    log.info("零评论 %s | 已覆盖 %s | 已开页采过 %s | 待补采 %s（写入 %s）",
+             idle, full, done, len(rows), out_file)
     return len(rows)
 
 def main(argv=None):

@@ -1,0 +1,3 @@
+﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
+25519401854318299,25519908384267646,,0,Eric Skovan,"Note that the 'target glucose range' is different from the alarm settings. Target glucose is only used for displayed charts, not alarms.",2025-11-26 13:10,2
+25519401854318299,25519758770949274,,0,Bill Henderson,0 and 150,2025-11-26 12:42,1

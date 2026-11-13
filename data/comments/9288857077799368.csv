@@ -1,0 +1,4 @@
+﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
+9288857077799368,9288882177796858,,0,Peggy Gilmour,It shows a temperature range on the side of the box,2025-01-12 14:41,0
+9288857077799368,9289403324411410,,1,Barrie Linch,"Peggy Gilmour I think that might be an operating temperature, not a storage temperature.",2025-01-12 17:23,0
+9288857077799368,9290206947664381,,0,Bob Okun,Call Abbott,2025-01-12 21:06,0

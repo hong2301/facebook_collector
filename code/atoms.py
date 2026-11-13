@@ -134,7 +134,7 @@ def _idle_grew(_round):
     return not grew
 
 
-def collect_post(post_url, output=RAW_DIR, sort="all",
+def collect_post(post_url, output=None, sort="all",
                  max_comments=0, pause_min=1.0, pause_max=3.0,
                  scroll_pause_min=1.0, scroll_pause_max=3.0,
                  max_idle=5, max_rounds=500, prune_keep=40):
@@ -163,7 +163,10 @@ def collect_post(post_url, output=RAW_DIR, sort="all",
     tab.get(post_url)
     wait_doc(tab, 30)
     time.sleep(6)
+    from lib.config import COMMENTS_DIR, POSTS_DIR
+    output = output or POSTS_DIR
     os.makedirs(output, exist_ok=True)
+    os.makedirs(COMMENTS_DIR, exist_ok=True)
 
     # 分享短链（/share/p/xxxx）需要先跳转，用最终 URL 解析 post_id
     post_id = postlib.parse_post_id(tab.url) or postlib.parse_post_id(post_url)
@@ -175,8 +178,7 @@ def collect_post(post_url, output=RAW_DIR, sort="all",
 
     conn = _recorder
     tab.listen.start("graphql")
-    _recorder = GraphQLRecorder(tab, output, group=post_url,
-                                feed_only=False, index_name="responses.csv")
+    _recorder = GraphQLRecorder(tab, RAW_DIR, group=post_url, feed_only=False)
     _recorder.start()
     log.info("监听已启动 -> %s | 帖子 %s", output, post_id)
 
@@ -255,15 +257,17 @@ def _collect_parsed(recorder):
     return out
 
 
-def raw_to_posts(raw_dir=RAW_DIR, output=None):
+def raw_to_posts(raw_dir=RAW_DIR, posts_dir=None, comments_dir=None):
     """【原子】读取 feed 原始响应，输出帖子 JSON + 评论 CSV（零请求）。
 
-    每帖一份：posts/<post_id>.json、comments/<post_id>.csv，另附 index.csv。
+    帖子写 <posts_dir>/<post_id>.json，评论写 <comments_dir>/<post_id>.csv。
 
     Returns:
         (帖子数, 评论数)
     """
-    output = output or os.path.join(ROOT, "data", "posts")
+    from lib.config import COMMENTS_DIR, POSTS_DIR
+    posts_dir = posts_dir or POSTS_DIR
+    comments_dir = comments_dir or COMMENTS_DIR
     posts, comments = {}, {}
     files = sorted(glob.glob(os.path.join(raw_dir, "*.jsonl")))
     if not files:
@@ -277,5 +281,6 @@ def raw_to_posts(raw_dir=RAW_DIR, output=None):
             for c in extractlib.preview_comments(node):
                 comments.setdefault(c["comment_id"], c)
 
-    return extractlib.write_output(output, list(posts.values()),
+    return extractlib.write_output(posts_dir, comments_dir,
+                                   list(posts.values()),
                                    list(comments.values()))

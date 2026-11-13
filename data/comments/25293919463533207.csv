@@ -1,0 +1,12 @@
+﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
+25293919463533207,25295268023398351,,0,Wolfgang Sander,"Are actual values in LibreView? 
+If so, the problem is with the LibreView and Follower Phone connection. 
+So is Internet connection established? 
+E.g. Sign out and sign in again in LibreLinkUp app, or restart follower phone. 
+If no, the problem is with the LibreView and Master Phone connection (the phone which has the Bluetooth connection to the sensor). 
+So is Internet connection established? 
+E.g. Sign out and sign in again in LibreLink/Libre 3 App, or restart Master Phone.
+
+You cannot connect to LibreView?  Then actually a server maintenance is running or another server error occurred,. Patience and wait.",2025-11-01 17:54,1
+25293919463533207,25296085446649942,,0,Susan Jenkins,The application only works on one reader. My Apple Watch only gets alarms high/low. Lost signal.,2025-11-01 19:57,0
+25293919463533207,25295047190087101,,0,Michele Gardin,"Non puoi associare 2 app su due telefoni, con lo stesso account, sei obbligato a usare il lettore freestyle 2 come prima associazione al sensore, e poi successivamente lo scansioni con 1 app sola su un telefono, in questo modo però gli allarmi li hai solo sul dispositivo primario ovvero il lettore entrambi i dispositivi puoi vedere solo le letture istantanee scansionando il sensore e perdi il monitoraggio in tempo reale… seconda opzione è scansionare con 1 solo dispositivo esempio IPhone e hai tutto lì non puoi più associare nessun dispositivo successivamente con altre app perché le app vanno in conflitto e si crea confusione sul sistema e non funziona.",2025-11-01 17:20,0

@@ -1,0 +1,4 @@
+﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
+23880885758169925,23887485167509984,,0,Keith Krupar,You need to have your phone close for the reading to work on your watch,2025-05-20 00:36,0
+23880885758169925,23884014807857020,,0,Patrick Xjr,"Good morning 
+For the time being there is not an app on Apple Watch connected directly to the sensor. It is always the iPhone which is the relay. So you need to have the phone at a distance of 5 or 6 meters max from the sensor. Normally flow of data are going from sensor to phone each 5 mn. If not you only need to scan with the phone to get refreshed data. The app on watch are a repeater from the phone…",2025-05-19 13:46,0

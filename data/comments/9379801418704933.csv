@@ -1,0 +1,5 @@
+﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
+9379801418704933,9383091698375905,,0,Wolfgang Sander,"ISO standard is for bg meters only.
+CGMS have the MARD, for Libre 3 it's below 8%.
+So both result in 23% possible and hence allowed .deviations.",2025-01-29 19:50,0
+9379801418704933,9379868798698195,,0,Bob Okun,"ISO STANDARD.  +- 15 below 100, +- 15% above 100",2025-01-29 04:42,0

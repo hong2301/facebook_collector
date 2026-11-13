@@ -1,0 +1,14 @@
+﻿post_id,comment_id,parent_id,depth,author,text,time,like_count
+10005462259472176,10005811079437294,,0,Patrick Xjr,"Good afternoon
+Yes when reader scans first then no automatism on phone.
+Normally we use LibreLink app on phone.
+The procedure is rather strict:
+First you install sensor.
+Then you open app on phone, then you scan with the phone.
+Then it will announce that you have a new sensor, and you have to scan again to launch. Then you get a yellow page with timer beginning at 60 mn.
+Then after an hour on your phone you can check if sensor is connected in Bluetooth in your Bluetooth parameters on your phone. If yes all is ok if not visible problem of communication with sensor. 
+Switch off the phone and switch on to initiate the Bluetooth. 
+Then for the warning alarms, they are working only if phone connected in Bluetooth…
+
+Sometimes it is the sensor which has a failure, but sometimes it is coming from the phone ( not enough free memory, too much Bluetooth devices connected, ..)",2025-05-06 00:20,1
+10005462259472176,10012299668788435,,0,Kate Newman,Thanks again I am sure all volumes are up but will double check again. Thank you for your help,2025-05-06 19:22,0

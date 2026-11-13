@@ -9,6 +9,8 @@ ROOT = os.path.dirname(CODE_DIR)                        # 项目根
 LOG_DIR = os.path.join(ROOT, "logs")
 DATA_DIR = os.path.join(ROOT, "data")
 RAW_DIR = os.path.join(DATA_DIR, "raw")
+POSTS_DIR = os.path.join(DATA_DIR, "posts")
+COMMENTS_DIR = os.path.join(DATA_DIR, "comments")
 INPUT_FILE = os.path.join(CODE_DIR, "input.csv")
 
 LOGIN_COOKIE = "c_user"
