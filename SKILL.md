@@ -11,15 +11,6 @@ description: 维护 Facebook 群组采集器（GraphQL 监听路线）。改代�
 
 代码里**禁止**硬编码本机路径，统一走 `lib/config.env()`。
 
-## 账号
-
-`accounts.json`（项目根，已 gitignore）存账号：`user_id` / `password` / `totp_secret` / `port` / `profile`。
-
-- 验证码本地算：`lib.totp.now(secret)`，与 2fa.fan 结果一致，不必依赖外部网站
-- 登录：`features.py login [name]`，已登录的 profile 会跳过，不会登出
-- 每个账号必须使用独立 `port` + `profile`，避免登录态互相覆盖
-- 严禁把 `accounts.json` 提交到仓库或贴进任何会外传的地方
-
 ## 项目性质
 
 采集 Facebook 公开群组的帖子与互动数据。**只做被动监听**：不构造请求、不伪造参数、不改请求频率，只旁听页面自己发出的 `/api/graphql` 响应并落盘。

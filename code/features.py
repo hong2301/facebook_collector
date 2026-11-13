@@ -6,7 +6,6 @@
 | 采集单个帖子+评论   | `collect_post_url(...)`     | post_url / output / sort / max_comments / 等待参数 |
 | 批量采集帖子        | `collect_posts(...)`        | urls 或 input_file / start / end / output / 采集参数 |
 | 生成待补采清单      | `plan_missing_posts(...)`   | posts_dir / out_file / limit |
-| 登录账号            | `login_accounts(...)`       | names / accounts_file / port |
 
 参数属于功能本身，其它功能不共用。直接运行本文件即按默认参数执行。
 """
@@ -19,7 +18,6 @@ import os
 import sys
 
 import atoms
-from lib.accounts import ACCOUNTS_FILE, load_accounts
 from lib.config import CODE_DIR, INPUT_FILE, RAW_DIR, ROOT
 from lib.logger import get_logger, setup
 from lib.utils import read_input
@@ -217,47 +215,6 @@ def plan_missing_posts(posts_dir=None, out_file=None, limit=0):
              idle, full, len(rows), out_file)
     return len(rows)
 
-def login_accounts(names=None, accounts_file=None, port=None):
-    """登录账号清单里的账号（默认全部）。
-
-    已登录的账号会直接跳过，不会登出。
-
-    Returns:
-        (成功数, 失败数)
-    """
-    accounts = load_accounts(accounts_file or ACCOUNTS_FILE)
-    if not accounts:
-        log.error("没有读取到账号：%s", accounts_file or ACCOUNTS_FILE)
-        return 0, 0
-    if names:
-        wanted = set(names)
-        accounts = [a for a in accounts
-                    if a.get("name") in wanted or a.get("user_id") in wanted]
-        if not accounts:
-            log.error("没有匹配的账号：%s", ", ".join(names))
-            return 0, 0
-
-    log.info("待登录账号 %s 个：%s", len(accounts),
-             ", ".join(str(a.get("name")) for a in accounts))
-    ok = fail = 0
-    for acc in accounts:
-        name = acc.get("name") or acc.get("user_id")
-        log.info("登录 %s（端口 %s / profile %s）", name,
-                 port or acc.get("port"), acc.get("profile"))
-        try:
-            if atoms.login_account(acc, port=port):
-                ok += 1
-            else:
-                fail += 1
-        except KeyboardInterrupt:
-            raise
-        except Exception:
-            log.exception("登录失败：%s", name)
-            fail += 1
-    log.info("登录完成：成功 %s，失败 %s", ok, fail)
-    return ok, fail
-
-
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Facebook 采集功能")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -330,12 +287,6 @@ def main(argv=None):
     m.add_argument("--limit", type=int, default=0, help="0=全部")
     m.add_argument("-q", "--quiet", action="store_true")
 
-    lg = sub.add_parser("login", help="登录账号（读 accounts.json）")
-    lg.add_argument("names", nargs="*", help="账号名；留空=全部")
-    lg.add_argument("-f", "--accounts-file", default=ACCOUNTS_FILE)
-    lg.add_argument("--port", type=int, default=None, help="覆盖账号端口")
-    lg.add_argument("-q", "--quiet", action="store_true")
-
     a = ap.parse_args(argv)
     setup(quiet=a.quiet)
     params = {k: v for k, v in vars(a).items() if k not in ("cmd", "quiet")}
@@ -343,8 +294,6 @@ def main(argv=None):
         collect_group_feed(**params)
     elif a.cmd == "post":
         collect_post_url(**params)
-    elif a.cmd == "login":
-        login_accounts(**params)
     elif a.cmd == "build":
         build_posts_from_raw(**params)
     elif a.cmd == "plan":

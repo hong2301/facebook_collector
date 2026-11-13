@@ -18,7 +18,6 @@ import time
 from lib import session
 from lib.auth import is_logged_in
 from lib.browser import wait_doc
-from lib.login import login as _login
 from lib.config import RAW_DIR, ROOT
 from lib.listener import GraphQLRecorder
 from lib.logger import get_logger
@@ -274,28 +273,3 @@ def raw_to_posts(raw_dir=RAW_DIR, output=None):
 
     return extractlib.write_output(output, list(posts.values()),
                                    list(comments.values()))
-
-
-def login_account(account, port=None, profile=None):
-    """【原子】登录一个账号（账号密码 + TOTP）。
-
-    Args:
-        account: dict，含 user_id / password / totp_secret，可含 port / profile
-        port:    覆盖账号里的端口
-        profile: 覆盖账号里的 profile 子目录
-
-    Returns:
-        True 成功 / False 失败（可能卡在人机验证，需人工）
-    """
-    port = port or account.get("port") or config_port()
-    profile = profile or account.get("profile")
-    ok = _login(account, port=port, profile=profile)
-    if ok:
-        session.set_port(port)
-    return ok
-
-
-def config_port():
-    """默认端口（.env 的 FB_PORT）。"""
-    from lib.config import DEFAULT_PORT
-    return DEFAULT_PORT
