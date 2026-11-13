@@ -33,18 +33,22 @@ return JSON.stringify({lines: (a.innerText || '').split(NL), aria});
 
 JS_SCROLLER = """
 const sc = [...document.querySelectorAll('div')]
-  .filter(d => d.scrollHeight - d.clientHeight > 400)
+  .filter(d => d.scrollHeight - d.clientHeight > 120)
   .sort((a, b) => (b.scrollHeight - b.clientHeight) - (a.scrollHeight - a.clientHeight))[0];
-if (!sc) { window.scrollTo(0, document.body.scrollHeight); return 0; }
+if (!sc) { window.scrollTo(0, document.body.scrollHeight); return document.body.scrollHeight; }
 sc.scrollTop = sc.scrollHeight;
 return sc.scrollHeight;
 """
 
 JS_SCROLLER_STATE = """
 const sc = [...document.querySelectorAll('div')]
-  .filter(d => d.scrollHeight - d.clientHeight > 400)
+  .filter(d => d.scrollHeight - d.clientHeight > 120)
   .sort((a, b) => (b.scrollHeight - b.clientHeight) - (a.scrollHeight - a.clientHeight))[0];
-if (!sc) return JSON.stringify({st:0, sh:0, ch:0, atBottom:true});
+if (!sc) {
+  const y = window.scrollY, h = document.body.scrollHeight, vh = window.innerHeight;
+  return JSON.stringify({st: Math.round(y), sh: h, ch: vh,
+                         atBottom: y + vh >= h - 50, fallback: true});
+}
 return JSON.stringify({
   st: Math.round(sc.scrollTop), sh: sc.scrollHeight, ch: sc.clientHeight,
   atBottom: sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 50
@@ -218,6 +222,7 @@ def set_sort(kind="most_relevant", tab=None):
         except Exception as exc:
             log.debug("菜单项点击失败：%r", exc)
             return False
+        move_mouse_away(tab)
         time.sleep(random.uniform(2.0, 3.0))
         log.info("评论排序切换为 %s", zh)
         return True
@@ -229,13 +234,13 @@ def set_sort(kind="most_relevant", tab=None):
 def scroll_to_bottom(step=1400, tab=None):
     """滚动评论容器（对话框内），返回滚动后高度。"""
     tab = tab or get_tab()
-    return tab.run_js(JS_SCROLLER) or 0
+    return tab.run_js(JS_SCROLLER, timeout=6) or 0
 
 
 def scroller_state(tab=None):
     tab = tab or get_tab()
     try:
-        return json.loads(tab.run_js(JS_SCROLLER_STATE) or "{}")
+        return json.loads(tab.run_js(JS_SCROLLER_STATE, timeout=6) or "{}")
     except Exception:
         return {}
 
@@ -264,6 +269,31 @@ return all.length;
 """
 
 
+def _hover_xy(tab, ele):
+    """按元素中心坐标派发鼠标移动（不等待可交互，避免卡住）。"""
+    try:
+        rect = ele.rect
+        x = int(rect.location[0] + rect.size[0] / 2)
+        y = int(rect.location[1] + rect.size[1] / 2)
+        tab.run_cdp("Input.dispatchMouseEvent", type="mouseMoved", x=x, y=y)
+        return True
+    except Exception:
+        return False
+
+
+def move_mouse_away(tab=None):
+    """把鼠标移到安全元素（标题）上，避免停在头像上触发悬浮卡片。"""
+    tab = tab or get_tab()
+    for sel in ('xpath://h1', 'xpath://h2', 'xpath://h3'):
+        try:
+            ele = tab.ele(sel, timeout=0.5)
+        except Exception:
+            ele = None
+        if ele and _hover_xy(tab, ele):
+            return True
+    return False
+
+
 def expand_one(pause_min=1.0, pause_max=3.0, tab=None):
     """真实点击一个「全部/查看 N 条回复」，点完随机等待。"""
     tab = tab or get_tab()
@@ -277,11 +307,11 @@ def expand_one(pause_min=1.0, pause_max=3.0, tab=None):
         if not ele:
             continue
         try:
-            ele.scroll.to_see()
-            ele.click()
+            ele.click(by_js=True)     # JS 点击：不移动鼠标、不等待可交互
         except Exception as exc:
             log.debug("点击失败 %s：%r", sel, exc)
             continue
+        move_mouse_away(tab)          # 防止头像 hover 弹出浮层
         time.sleep(random.uniform(pause_min, pause_max))
         return 1
     return 0
@@ -302,7 +332,7 @@ def prune_comments(keep=40, tab=None):
     """删除已展开完的旧评论节点；带未展开回复的保留（层级安全）。"""
     tab = tab or get_tab()
     try:
-        removed = int(tab.run_js(JS_PRUNE_SAFE % keep) or 0)
+        removed = int(tab.run_js(JS_PRUNE_SAFE % keep, timeout=8) or 0)
     except Exception:
         return 0
     if removed:
@@ -384,34 +414,71 @@ COMMENT_FIELDS = ["post_id", "comment_id", "parent_id", "depth", "author",
                   "text", "time", "like_count"]
 
 
+def _read_existing_comments(path):
+    if not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        return {r.get("comment_id"): r for r in csv.DictReader(f)
+                if r.get("comment_id")}
+
+
+def _read_existing_doc(path):
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
 def save_result(output, post_id, post_url, base, comments):
-    """保存帖子 JSON 与评论 CSV（文件名用 post_id 配对）。"""
+    """保存帖子 JSON 与评论 CSV（与已有数据合并，不覆盖丢失）。"""
     posts_dir = os.path.join(output, "posts")
     cmts_dir = os.path.join(output, "comments")
     os.makedirs(posts_dir, exist_ok=True)
     os.makedirs(cmts_dir, exist_ok=True)
 
+    doc_path = os.path.join(posts_dir, post_id + ".json")
+    csv_path = os.path.join(cmts_dir, post_id + ".csv")
+
+    # 已有帖子记录（来自 feed 整理）作为底稿，本次新值覆盖非空项
+    doc = _read_existing_doc(doc_path)
     meta = parse_post_lines(base.get("lines") or [])
-    # aria 只作兜底（「赞：N位用户」会命中评论的赞，不能优先用）
-    if meta.get("comment_count") is None:
-        for label in base.get("aria") or []:
-            m = re.search(r"(\d[\d,]*)\s*(?:条评论|comments?)", label)
-            if m:
-                meta["comment_count"] = int(m.group(1).replace(",", ""))
-                break
-    doc = {"post_id": post_id, "post_url": post_url, **meta,
-           "comment_collected": len(comments),
-           "fetched_at": time.strftime("%Y-%m-%d %H:%M:%S")}
-    with open(os.path.join(posts_dir, post_id + ".json"), "w",
-              encoding="utf-8") as f:
+    for key, value in meta.items():
+        if value not in (None, "", []):
+            doc[key] = value
+    doc.update({
+        "post_id": post_id,
+        "post_url": post_url or doc.get("post_url", ""),
+        "comment_source": "post_page",
+        "fetched_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+    })
+
+    # 评论合并：保留已有（预览）的，追加新采的
+    merged = _read_existing_comments(csv_path)
+    for cid, row in comments.items():
+        merged[cid] = {
+            "post_id": post_id,
+            "comment_id": cid,
+            "parent_id": row.get("parent_id", ""),
+            "depth": row.get("depth", 0),
+            "author": row.get("author", ""),
+            "text": row.get("text", ""),
+            "time": row.get("time", ""),
+            "like_count": row.get("like_count", 0),
+        }
+    doc["comment_collected"] = len(merged)
+
+    with open(doc_path, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, indent=2)
 
-    rows = sorted(comments.values(), key=lambda c: (c["depth"], c["time"]))
-    with open(os.path.join(cmts_dir, post_id + ".csv"), "w",
-              encoding="utf-8-sig", newline="") as f:
+    rows = sorted(merged.values(), key=lambda c: (int(c.get("depth") or 0),
+                                                  str(c.get("time") or "")))
+    with open(csv_path, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, COMMENT_FIELDS)
         w.writeheader()
         for c in rows:
-            w.writerow({"post_id": post_id, **{k: c.get(k, "") for k in COMMENT_FIELDS[1:]}})
-    log.info("已保存：posts/%s.json（%s 评论 -> comments/%s.csv）",
+            w.writerow({k: c.get(k, "") for k in COMMENT_FIELDS})
+    log.info("已保存：posts/%s.json（累计 %s 评论 -> comments/%s.csv）",
              post_id, len(rows), post_id)

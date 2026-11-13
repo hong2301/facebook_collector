@@ -10,6 +10,7 @@
 | `code/lib/` | 实现层，一个文件一个领域 | 业务流程编排 |
 | `data/raw/` | 接口原始响应（运行时产生，已 gitignore） | 整理后的交付文件 |
 | `.env` | 本机指纹（profile / 代理 / Chrome / 端口），已 gitignore | 提交 |
+| `accounts.json` | 账号密码 / TOTP 密钥 / 端口 / profile，已 gitignore | 提交 |
 | `doc/` | 设计与契约文档 | 代码 |
 | `logs/` | 运行日志（已 gitignore） | — |
 
@@ -19,8 +20,8 @@
 
 | 文件 | 职责 | 关键内容 |
 |---|---|---|
-| `code/atoms.py` | **原子层**（最小可执行单元） | 小组：`open_port` / `check_login` / `collect_group_posts`<br>帖子：`collect_post(...)`<br>整理：`raw_to_posts(raw_dir, output)` |
-| `code/features.py` | **功能层**（原子组合 + 功能参数 + CLI） | `collect_group_feed(...)`（主页）<br>`collect_post_url(...)`（单帖+评论）<br>`collect_posts(...)`（批量帖子）<br>`build_posts_from_raw(...)`（整理 raw）<br>`plan_missing_posts(...)`（待补采清单） |
+| `code/atoms.py` | **原子层**（最小可执行单元） | 小组：`open_port` / `check_login` / `collect_group_posts`<br>帖子：`collect_post(...)`<br>整理：`raw_to_posts(raw_dir, output)`<br>账号：`login_account(account, port, profile)` |
+| `code/features.py` | **功能层**（原子组合 + 功能参数 + CLI） | `collect_group_feed(...)`（主页）<br>`collect_post_url(...)`（单帖+评论）<br>`collect_posts(...)`（批量帖子）<br>`build_posts_from_raw(...)`（整理 raw）<br>`plan_missing_posts(...)`（待补采清单）<br>`login_accounts(...)`（账号登录） |
 
 ### 实现层 `code/lib/`
 
@@ -33,6 +34,9 @@
 | `code/lib/auth.py` | 登录检测 | `is_logged_in(tab)`，只读 `c_user` cookie |
 | `code/lib/listener.py` | GraphQL 监听 | `GraphQLRecorder`（后台线程落盘）、`parse_body_tree()`（JSONL 合并）、`RAW_DIR` |
 | `code/lib/scroll.py` | 主页滚动与 DOM 清理 | `scroll_once` / `scroll_until` / `prune_dom` / `at_bottom` / `page_state` |
+| `code/lib/accounts.py` | 账号清单读取 | `load_accounts` / `find_account`（读 `accounts.json`） |
+| `code/lib/login.py` | 账号登录（密码 + TOTP） | `login` / `logged_in` |
+| `code/lib/totp.py` | TOTP 生成（RFC 6238） | `now` / `seconds_left` |
 | `code/lib/extract.py` | raw → 帖子/预览评论（零请求） | `iter_nodes` / `post_record` / `preview_comments` / `write_output` |
 | `code/lib/post.py` | 帖子页：数据提取 / 排序 / 展开 / 清理 | `extract_post` / `set_sort` / `scroll_to_bottom` / `expand_comments` / `prune_comments` / `save_result` |
 | `code/lib/comments.py` | 评论解析 | `parse_response`（顶层 + Depth1/Depth2）、`parse_comment_node` |
@@ -94,6 +98,10 @@ python code/features.py posts <url1> <url2> --max-comments 100
 python code/features.py build
 # 生成待补采清单（写入 code/input_posts.csv）
 python code/features.py plan
+
+# 账号登录（读 accounts.json，已登录则跳过）
+python code/features.py login
+python code/features.py login main
 python code/features.py post <帖子链接> --sort all
 
 # 批量采集帖子（读 code/input_posts.csv 或直接给链接）
@@ -103,7 +111,11 @@ python code/features.py posts <url1> <url2> --max-comments 100
 # 整理 raw → 帖子 JSON + 评论 CSV（零请求）
 python code/features.py build
 # 生成待补采清单（写入 code/input_posts.csv）
-python code/features.py plan --max-comments 100   --scroll-pause-min 1.5 --scroll-pause-max 3 --pause-min 1.5 --pause-max 3
+python code/features.py plan
+
+# 账号登录（读 accounts.json，已登录则跳过）
+python code/features.py login
+python code/features.py login main --max-comments 100   --scroll-pause-min 1.5 --scroll-pause-max 3 --pause-min 1.5 --pause-max 3
 
 # 或在代码里组合原子动作
 python -c "import sys; sys.path.insert(0,'code'); import index; atoms.open_port(9227); atoms.check_login()"

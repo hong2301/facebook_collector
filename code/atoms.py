@@ -18,6 +18,7 @@ import time
 from lib import session
 from lib.auth import is_logged_in
 from lib.browser import wait_doc
+from lib.login import login as _login
 from lib.config import RAW_DIR, ROOT
 from lib.listener import GraphQLRecorder
 from lib.logger import get_logger
@@ -137,7 +138,7 @@ def _idle_grew(_round):
 def collect_post(post_url, output=RAW_DIR, sort="all",
                  max_comments=0, pause_min=1.0, pause_max=3.0,
                  scroll_pause_min=1.0, scroll_pause_max=3.0,
-                 max_idle=6, max_rounds=500, prune_keep=40):
+                 max_idle=5, max_rounds=500, prune_keep=40):
     """【核心】采集一个帖子：帖子基本数据 + 完整评论。
 
     Args:
@@ -182,24 +183,39 @@ def collect_post(post_url, output=RAW_DIR, sort="all",
     try:
         while rounds < max_rounds:
             rounds += 1
+            t0 = time.time()
             postlib.scroll_to_bottom()
-            time.sleep(pick_pause(scroll_pause_min, scroll_pause_max))
-            clicked = postlib.expand_comments(limit=6, pause_min=pause_min, pause_max=pause_max)
-            postlib.prune_comments(prune_keep)
+            t_scroll = time.time() - t0
 
+            pause = pick_pause(scroll_pause_min, scroll_pause_max)
+            time.sleep(pause)
+
+            t1 = time.time()
+            clicked = postlib.expand_comments(limit=6, pause_min=pause_min,
+                                              pause_max=pause_max)
+            t_click = time.time() - t1
+
+            t2 = time.time()
+            postlib.prune_comments(prune_keep)
+            t_prune = time.time() - t2
+
+            t3 = time.time()
             before = len(comments)
             comments = _collect_parsed(_recorder)
-            if len(comments) > before:
-                idle = 0
-                log.info("评论 %s 条（第 %s 轮，点击 %s）", len(comments), rounds, clicked)
-            else:
-                idle += 1
+            t_parse = time.time() - t3
+            grew = len(comments) - before
 
+            log.info("轮 %s | 评论 %s (+%s) | 滚动%.1fs 等待%.1fs 点击%.1fs"
+                     "(点%s) 清理%.1fs 解析%.1fs",
+                     rounds, len(comments), grew, t_scroll, pause,
+                     t_click, clicked, t_prune, t_parse)
+
+            idle = 0 if grew else idle + 1
             if max_comments and len(comments) >= max_comments:
                 reason = "max_comments"
                 break
-            st = postlib.scroller_state()
-            if idle >= max_idle and st.get("atBottom"):
+            # 连续 max_idle 轮无新增评论 => 没有更多了
+            if idle >= max_idle:
                 reason = "no_new_content"
                 break
     finally:
@@ -258,3 +274,28 @@ def raw_to_posts(raw_dir=RAW_DIR, output=None):
 
     return extractlib.write_output(output, list(posts.values()),
                                    list(comments.values()))
+
+
+def login_account(account, port=None, profile=None):
+    """【原子】登录一个账号（账号密码 + TOTP）。
+
+    Args:
+        account: dict，含 user_id / password / totp_secret，可含 port / profile
+        port:    覆盖账号里的端口
+        profile: 覆盖账号里的 profile 子目录
+
+    Returns:
+        True 成功 / False 失败（可能卡在人机验证，需人工）
+    """
+    port = port or account.get("port") or config_port()
+    profile = profile or account.get("profile")
+    ok = _login(account, port=port, profile=profile)
+    if ok:
+        session.set_port(port)
+    return ok
+
+
+def config_port():
+    """默认端口（.env 的 FB_PORT）。"""
+    from lib.config import DEFAULT_PORT
+    return DEFAULT_PORT

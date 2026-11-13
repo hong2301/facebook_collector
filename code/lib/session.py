@@ -15,6 +15,12 @@ def open_port(port):
     return br
 
 
+def set_port(port):
+    """切换后续操作使用的端口（多账号场景）。"""
+    if _state["port"] != port:
+        _state.update(port=port, br=None, tab=None)
+
+
 def is_connected():
     return _state["br"] is not None
 

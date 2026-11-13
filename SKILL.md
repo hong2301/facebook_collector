@@ -11,6 +11,15 @@ description: 维护 Facebook 群组采集器（GraphQL 监听路线）。改代�
 
 代码里**禁止**硬编码本机路径，统一走 `lib/config.env()`。
 
+## 账号
+
+`accounts.json`（项目根，已 gitignore）存账号：`user_id` / `password` / `totp_secret` / `port` / `profile`。
+
+- 验证码本地算：`lib.totp.now(secret)`，与 2fa.fan 结果一致，不必依赖外部网站
+- 登录：`features.py login [name]`，已登录的 profile 会跳过，不会登出
+- 每个账号必须使用独立 `port` + `profile`，避免登录态互相覆盖
+- 严禁把 `accounts.json` 提交到仓库或贴进任何会外传的地方
+
 ## 项目性质
 
 采集 Facebook 公开群组的帖子与互动数据。**只做被动监听**：不构造请求、不伪造参数、不改请求频率，只旁听页面自己发出的 `/api/graphql` 响应并落盘。
@@ -117,7 +126,7 @@ open_port → check_login
 | 滚动等待 | 独立参数 `scroll_pause_min~scroll_pause_max`，默认 1-3 秒 |
 | 评论接口 | `CommentsListComponentsPaginationQuery`（顶层）+ `Depth1/Depth2CommentsListPaginationQuery`（回复） |
 | 层级 | 最多 3 级（depth 0/1/2），三级下不再有四级 |
-| 停止 | 达到 `max_comments` / 连续 `max_idle` 轮无新增且到底 / `max_rounds` |
+| 停止 | 达到 `max_comments` / **连续 `max_idle`（默认 5）轮无新增评论** / `max_rounds` |
 
 ## DOM 清理（评论页）
 
@@ -153,6 +162,7 @@ data/raw/index.csv                                每行一个响应
 | 关掉或刷新工作标签页 | 采集结束后标签页保留，便于事后重提取 |
 | 在 `collect_group_posts` 外启停监听 | 会漏掉手动滚动产生的响应 |
 | 手动 `kill` 采集进程前不确认 | 会丢掉正在跑的批次（接续要用 `--resume`） |
+| 用真实鼠标点击展开按钮 | 会悬停在头像上弹浮层，且可能阻塞；用 `by_js=True` |
 
 ## 验证清单
 

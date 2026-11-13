@@ -6,6 +6,7 @@
 | 采集单个帖子+评论   | `collect_post_url(...)`     | post_url / output / sort / max_comments / 等待参数 |
 | 批量采集帖子        | `collect_posts(...)`        | urls 或 input_file / start / end / output / 采集参数 |
 | 生成待补采清单      | `plan_missing_posts(...)`   | posts_dir / out_file / limit |
+| 登录账号            | `login_accounts(...)`       | names / accounts_file / port |
 
 参数属于功能本身，其它功能不共用。直接运行本文件即按默认参数执行。
 """
@@ -18,6 +19,7 @@ import os
 import sys
 
 import atoms
+from lib.accounts import ACCOUNTS_FILE, load_accounts
 from lib.config import CODE_DIR, INPUT_FILE, RAW_DIR, ROOT
 from lib.logger import get_logger, setup
 from lib.utils import read_input
@@ -86,7 +88,7 @@ def collect_group_feed(input_file=INPUT_FILE, start=0, end=0, output=RAW_DIR,
 def collect_post_url(post_url, output=RAW_DIR, sort="all", max_comments=0,
                      pause_min=1.0, pause_max=3.0,
                      scroll_pause_min=1.0, scroll_pause_max=3.0,
-                     max_idle=6, max_rounds=500, prune_keep=40, port=9227):
+                     max_idle=5, max_rounds=500, prune_keep=40, port=9227):
     """采集单个帖子：帖子基本数据 + 完整评论。
 
     Args:
@@ -118,7 +120,7 @@ def collect_posts(urls=None, input_file=None, start=0, end=0,
                   output=None, port=9227, sort="all", max_comments=0,
                   pause_min=1.0, pause_max=3.0,
                   scroll_pause_min=1.0, scroll_pause_max=3.0,
-                  max_idle=6, max_rounds=500, prune_keep=40):
+                  max_idle=5, max_rounds=500, prune_keep=40):
     """批量采集帖子：链接来自命令行或清单文件（CSV 的 url 列）。
 
     Returns:
@@ -202,7 +204,7 @@ def plan_missing_posts(posts_dir=None, out_file=None, limit=0):
             continue
         rows.append((d["post_url"], total - have, d["post_time"]))
 
-    rows.sort(key=lambda r: -r[1])          # 待补多的先采
+    rows.sort(key=lambda r: r[1])           # 待补少的先采（几百条的大帖放最后）
     if limit:
         rows = rows[:limit]
     with open(out_file, "w", encoding="utf-8-sig", newline="") as f:
@@ -214,6 +216,48 @@ def plan_missing_posts(posts_dir=None, out_file=None, limit=0):
     log.info("零评论帖 %s | 预览已覆盖 %s | 待补采 %s（写入 %s）",
              idle, full, len(rows), out_file)
     return len(rows)
+
+def login_accounts(names=None, accounts_file=None, port=None):
+    """登录账号清单里的账号（默认全部）。
+
+    已登录的账号会直接跳过，不会登出。
+
+    Returns:
+        (成功数, 失败数)
+    """
+    accounts = load_accounts(accounts_file or ACCOUNTS_FILE)
+    if not accounts:
+        log.error("没有读取到账号：%s", accounts_file or ACCOUNTS_FILE)
+        return 0, 0
+    if names:
+        wanted = set(names)
+        accounts = [a for a in accounts
+                    if a.get("name") in wanted or a.get("user_id") in wanted]
+        if not accounts:
+            log.error("没有匹配的账号：%s", ", ".join(names))
+            return 0, 0
+
+    log.info("待登录账号 %s 个：%s", len(accounts),
+             ", ".join(str(a.get("name")) for a in accounts))
+    ok = fail = 0
+    for acc in accounts:
+        name = acc.get("name") or acc.get("user_id")
+        log.info("登录 %s（端口 %s / profile %s）", name,
+                 port or acc.get("port"), acc.get("profile"))
+        try:
+            if atoms.login_account(acc, port=port):
+                ok += 1
+            else:
+                fail += 1
+        except KeyboardInterrupt:
+            raise
+        except Exception:
+            log.exception("登录失败：%s", name)
+            fail += 1
+    log.info("登录完成：成功 %s，失败 %s", ok, fail)
+    return ok, fail
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Facebook 采集功能")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -249,7 +293,7 @@ def main(argv=None):
     p.add_argument("--scroll-pause-min", type=float, default=1.0,
                    help="每次滚动后的等待下限（秒）")
     p.add_argument("--scroll-pause-max", type=float, default=3.0)
-    p.add_argument("--max-idle", type=int, default=6)
+    p.add_argument("--max-idle", type=int, default=5)
     p.add_argument("--max-rounds", type=int, default=500)
     p.add_argument("--prune-keep", type=int, default=40,
                    help="保留最近的评论节点数")
@@ -270,7 +314,7 @@ def main(argv=None):
     b.add_argument("--pause-max", type=float, default=3.0)
     b.add_argument("--scroll-pause-min", type=float, default=1.0)
     b.add_argument("--scroll-pause-max", type=float, default=3.0)
-    b.add_argument("--max-idle", type=int, default=6)
+    b.add_argument("--max-idle", type=int, default=5)
     b.add_argument("--max-rounds", type=int, default=500)
     b.add_argument("--prune-keep", type=int, default=40)
     b.add_argument("-q", "--quiet", action="store_true")
@@ -286,6 +330,12 @@ def main(argv=None):
     m.add_argument("--limit", type=int, default=0, help="0=全部")
     m.add_argument("-q", "--quiet", action="store_true")
 
+    lg = sub.add_parser("login", help="登录账号（读 accounts.json）")
+    lg.add_argument("names", nargs="*", help="账号名；留空=全部")
+    lg.add_argument("-f", "--accounts-file", default=ACCOUNTS_FILE)
+    lg.add_argument("--port", type=int, default=None, help="覆盖账号端口")
+    lg.add_argument("-q", "--quiet", action="store_true")
+
     a = ap.parse_args(argv)
     setup(quiet=a.quiet)
     params = {k: v for k, v in vars(a).items() if k not in ("cmd", "quiet")}
@@ -293,6 +343,8 @@ def main(argv=None):
         collect_group_feed(**params)
     elif a.cmd == "post":
         collect_post_url(**params)
+    elif a.cmd == "login":
+        login_accounts(**params)
     elif a.cmd == "build":
         build_posts_from_raw(**params)
     elif a.cmd == "plan":
