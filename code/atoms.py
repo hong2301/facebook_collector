@@ -165,12 +165,18 @@ def collect_post(post_url, output=RAW_DIR, sort="all",
     time.sleep(6)
     os.makedirs(output, exist_ok=True)
 
-    post_id = postlib.parse_post_id(post_url)
+    # 分享短链（/share/p/xxxx）需要先跳转，用最终 URL 解析 post_id
+    post_id = postlib.parse_post_id(tab.url) or postlib.parse_post_id(post_url)
+    if not post_id:
+        log.error("无法从链接解析 post_id：%s", post_url)
+        return {"post_id": "", "comments": 0, "rounds": 0,
+                "reason": "bad_url"}
     base = postlib.extract_post(post_id)
 
     conn = _recorder
     tab.listen.start("graphql")
-    _recorder = GraphQLRecorder(tab, output, group=post_url, feed_only=False)
+    _recorder = GraphQLRecorder(tab, output, group=post_url,
+                                feed_only=False, index_name="responses.csv")
     _recorder.start()
     log.info("监听已启动 -> %s | 帖子 %s", output, post_id)
 

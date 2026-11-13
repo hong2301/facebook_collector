@@ -93,7 +93,7 @@ def parse_body_tree(lines):
 
 class GraphQLRecorder(threading.Thread):
     def __init__(self, tab, outdir=RAW_DIR, exclude_docs=None, group="",
-                 feed_only=True):
+                 feed_only=True, index_name="index.csv"):
         super().__init__(daemon=True)
         self.tab = tab
         self.outdir = outdir
@@ -104,7 +104,7 @@ class GraphQLRecorder(threading.Thread):
         self.seq = 0
         self.records = []
         self.errors = []
-        self.index_csv = os.path.join(outdir, "index.csv")
+        self.index_csv = os.path.join(outdir, index_name)
         os.makedirs(outdir, exist_ok=True)
         self.seq = self._last_seq()
 

@@ -54,7 +54,10 @@ def iter_nodes(raw_path):
     """遍历一个 raw 文件里的所有 feed 节点。"""
     with open(raw_path, encoding="utf-8") as f:
         tree = parse_body_tree(f.read().split("\n"))
-    gf = (tree.get("node") or {}).get("group_feed") or {}
+    node_root = tree.get("node") or {}
+    gf = node_root.get("group_feed")
+    if not isinstance(gf, dict):
+        return                      # 评论等非 feed 响应不参与整理
     for edge in gf.get("edges") or []:
         node = (edge or {}).get("node") or {}
         if node.get("post_id"):
@@ -141,11 +144,21 @@ def write_output(output, posts, comments):
     for rec in posts:
         pid = rec["post_id"]
         rows = by_post.get(pid, [])
-        doc = dict(rec, comment_collected=len(rows),
-                   comment_source="feed_preview",
-                   fetched_at=time.strftime("%Y-%m-%d %H:%M:%S"))
-        with open(os.path.join(posts_dir, pid + ".json"), "w",
-                  encoding="utf-8") as f:
+        # 已有文件（含已采评论进度）作为底稿，raw 数据只覆盖非空项
+        path = os.path.join(posts_dir, pid + ".json")
+        old = {}
+        if os.path.exists(path):
+            try:
+                with open(path, encoding="utf-8") as f:
+                    old = json.load(f)
+            except Exception:
+                old = {}
+        doc = dict(old)
+        doc.update({k: v for k, v in rec.items() if v not in (None, "", [])})
+        doc["comment_collected"] = max(old.get("comment_collected") or 0, len(rows))
+        doc.setdefault("comment_source", "feed_preview")
+        doc["fetched_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(doc, f, ensure_ascii=False, indent=2)
         with open(os.path.join(cmts_dir, pid + ".csv"), "w",
                   encoding="utf-8-sig", newline="") as f:

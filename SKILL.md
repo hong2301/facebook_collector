@@ -125,6 +125,23 @@ open_port → check_login
 - 只删「自身及子孙没有待展开按钮」的评论节点，有子评论先跳过
 - composer 整块 = `contenteditable` 的最近 `div[role="table"]`，连头像/工具/发布一起删，保留最后一块
 
+## 帖子链接格式
+
+`lib/post.parse_post_id` 兼容：
+
+```
+/groups/<gid>/posts/<id>/
+/groups/<gid>/permalink/<id>/
+/groups/<gid>/user/<uid>/post/<id>/     新版单帖路径
+/share/p/<id>/  /share/g/<id>/          分享短码需先跳转，用最终 URL 解析
+/permalink.php?story_fbid=<id>&id=<gid>
+/videos/<id>  /reel/<id>  /watch/?v=<id>
+/photo?fbid=<id>
+?comment_id=xxx                          先剥离查询串
+```
+
+`collect_post` 打开链接后**用 `tab.url`（跳转后的最终地址）解析 post_id**，短链也能拿到。
+
 ## 数据契约
 
 ```

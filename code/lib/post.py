@@ -341,12 +341,30 @@ def prune_comments(keep=40, tab=None):
 
 
 def parse_post_id(url):
-    m = re.search(r"/posts/(\d+)", url or "")
-    if m:
-        return m.group(1)
-    m = re.search(r"story_fbid=(\d+)", url or "")
-    if m:
-        return m.group(1)
+    """从各种 Facebook 链接形态里取出 post_id。
+
+    支持：
+      /groups/<gid>/posts/<id>/
+      /groups/<gid>/permalink/<id>/
+      /groups/<gid>/user/<uid>/post/<id>/     （新版单帖路径）
+      /share/p/<id>/  /share/g/<id>/
+      /permalink.php?story_fbid=<id>&id=<gid>
+      /videos/<id>  /reel/<id>  /watch/?v=<id>
+      /photo?fbid=<id>
+    带 ?comment_id= 参数时先剥掉查询串。
+    """
+    u = (url or "").split("?comment_id=")[0]
+    for pat in (r"/posts/(\d+)",
+                r"/permalink/(\d+)",
+                r"/post/(\d+)",
+                r"/share/[a-z]/(\d{6,})",
+                r"story_fbid=(\d+)",
+                r"/(?:videos|reel|watch)/(\d+)",
+                r"[?&]v=(\d+)",
+                r"fbid=(\d+)"):
+        m = re.search(pat, u)
+        if m:
+            return m.group(1)
     return ""
 
 
