@@ -131,7 +131,8 @@ open_port → check_login
 features.collect_keyword(keyword, kind="posts", since="2025-01-01",
                          recent=False, seen=False, year=None, month=None,
                          author_me=False, port=9227)
-features.collect_keyword_slices(keyword, years=[2025, 2026], months=1..12)
+# 切片模式：传 years / months 列表即可
+features.collect_keyword(keyword, years=[2025, 2026], months=[1..12])
 ```
 
 - 筛选条件走 URL 的 `filters`（base64 JSON），结构：`{"rp_creation_time:0":"{\"name\":\"creation_time\",...}"}`

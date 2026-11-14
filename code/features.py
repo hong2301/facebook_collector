@@ -9,7 +9,6 @@
 | 翻译                | `translate_dataset(...)`    | kind=post/comment/all / limit |
 | 翻译回写 raw        | `translate_raw(...)`        | raw_dir / engine / limit |
 | 关键词搜帖          | `collect_keyword(...)`      | keyword / kind / 筛选 / since |
-| 关键词按月切片搜     | `collect_keyword_slices(...)` | keyword / years / months / output |
 
 参数属于功能本身，其它功能不共用。直接运行本文件即按默认参数执行。
 """
@@ -20,6 +19,7 @@ import glob
 import json
 import os
 import sys
+import time
 
 import atoms
 from lib.config import CODE_DIR, INPUT_FILE, RAW_DIR, ROOT
@@ -312,27 +312,64 @@ def translate_raw(raw_dir=None, limit=0):
 
 
 
-def collect_keyword(keyword, kind="top", since="2025-01-01", output=None,
-                    recent=False, seen=False, year=None, month=None,
-                    author_me=False, pause_min=1.0, pause_max=3.0, port=9227):
-    """按关键词搜索并采集帖子。
+def collect_keyword(keyword, kind="posts", since="2025-01-01", output=None,
+                    recent=False, seen=False, author_me=False,
+                    year=None, month=None, years=None, months=None,
+                    port=9227, pause=2.0, pause_min=1.0, pause_max=2.0):
+    """按关键词搜索采集帖子。
+
+    单次：只给 year/month（或不给），搜一次并滚到 since。
+    切片：给 years/months（列表），逐个月单独搜，规避单次结果上限。
 
     Args:
-        keyword:   搜索词
-        kind:      top（综合）/ posts（帖子）
-        since:     采到这个日期之前就停
-        recent:    只看近期帖子
-        seen:      只看你看过的帖子
-        year/month: 按发布日期筛选
-        author_me: 只看自己发的
+        keyword:    搜索词
+        kind:       top（综合）/ posts（帖子）
+        recent:     只看近期帖子
+        seen:       只看你看过的帖子
+        author_me:  只看自己发的
+        year/month: 单次搜索时的发布日期筛选
+        years/months: 列表形式，触发「按年月切片」模式
     """
     from lib.config import POSTS_DIR
     from lib import search as searchlib
 
+    output = output or POSTS_DIR
+    os.makedirs(output, exist_ok=True)
+
+    # 切片模式
+    if years or months:
+        ys = years or [2025, 2026]
+        ms = months or list(range(1, 13))
+        atoms.open_port(port)
+        if not atoms.check_login():
+            return 0
+        total = 0
+        n = len(ys) * len(ms)
+        i = 0
+        for y in ys:
+            for m in ms:
+                i += 1
+                url = searchlib.build_search_url(keyword, kind=kind, year=y,
+                                                 month=m, recent=recent,
+                                                 seen=seen, author_me=author_me)
+                log.info("切片 %s/%s：%s", i, n, url[:110])
+                try:
+                    info = atoms.collect_search_posts(
+                        url, output=output, since=f"{y}-{m:02d}-01",
+                        pause_min=pause_min, pause_max=pause_max)
+                    total += info.get("posts", 0)
+                except KeyboardInterrupt:
+                    raise
+                except Exception:
+                    log.exception("切片失败：%s-%s", y, m)
+                time.sleep(pause)
+        log.info("按月搜索完成：%s 个切片，共 %s 帖", n, total)
+        return total
+
+    # 单次模式
     url = searchlib.build_search_url(
         keyword, kind=kind, recent=recent, seen=seen,
         year=year, month=month, author_me=author_me)
-    output = output or POSTS_DIR
     log.info("关键词=%s | 类型=%s | since=%s", keyword, kind, since)
     log.info("搜索链接：%s", url)
 
@@ -343,61 +380,6 @@ def collect_keyword(keyword, kind="top", since="2025-01-01", output=None,
     return atoms.collect_search_posts(
         url, output=output, since=since,
         pause_min=pause_min, pause_max=pause_max)
-
-
-
-def collect_keyword_slices(keyword, kind="posts", years=None, months=None,
-                           output=None, port=9227, pause=2.0,
-                           pause_min=1.0, pause_max=2.0):
-    """按年月切片批量搜索：每个月单独搜一次，规避搜索结果条数上限。
-
-    Args:
-        years:  要搜的年份，默认 [2025, 2026]
-        months: 要搜的月份，默认 1-12
-        pause:  每个切片之间的间隔（秒）
-
-    Returns:
-        (总帖子数, 切片数)
-    """
-    import time as _time
-    from lib.config import POSTS_DIR
-    from lib import search as searchlib
-
-    years = years or [2025, 2026]
-    months = months or list(range(1, 13))
-    output = output or POSTS_DIR
-    os.makedirs(output, exist_ok=True)
-
-    # 已存在的帖子不重复采
-    seen = {f[:-5] for f in os.listdir(output) if f.endswith(".json")}
-    log.info("已有帖子 %s，关键词=%s，切片 %s 年 × %s 月",
-             len(seen), keyword, len(years), len(months))
-
-    atoms.open_port(port)
-    if not atoms.check_login():
-        return 0, 0
-
-    total = 0
-    slices = 0
-    for y in years:
-        for m in months:
-            url = searchlib.build_search_url(keyword, kind=kind, year=y, month=m)
-            slices += 1
-            log.info("切片 %s/%s：%s", slices, len(years) * len(months), url[:110])
-            try:
-                info = atoms.collect_search_posts(
-                    url, output=output, since=f"{y}-{m:02d}-01",
-                    pause_min=pause_min, pause_max=pause_max)
-                total += info.get("posts", 0)
-                log.info("  本切片 %s 帖（累计 %s）", info.get("posts", 0), total)
-            except KeyboardInterrupt:
-                raise
-            except Exception:
-                log.exception("切片失败：%s-%s", y, m)
-            _time.sleep(pause)
-
-    log.info("按月搜索完成：%s 个切片，共 %s 帖", slices, total)
-    return total, slices
 
 
 def main(argv=None):
@@ -490,23 +472,19 @@ def main(argv=None):
     kw.add_argument("-o", "--output", default=POSTS_OUTPUT_DIR)
     kw.add_argument("--recent", action="store_true", help="只看近期帖子")
     kw.add_argument("--seen", action="store_true", help="只看你看过的")
-    kw.add_argument("--year", type=int, help="按发布年份筛选")
+    kw.add_argument("--year", type=int, help="单次搜索：按发布年份筛选")
     kw.add_argument("--month", type=int, help="搭配 --year 用")
+    kw.add_argument("--years", nargs="*", type=int,
+                    help="切片模式：要搜的年份列表")
+    kw.add_argument("--months", nargs="*", type=int,
+                    help="切片模式：要搜的月份列表")
+    kw.add_argument("--pause", type=float, default=2.0,
+                    help="切片之间的间隔（秒）")
     kw.add_argument("--author-me", action="store_true", help="只看自己发的")
     kw.add_argument("--port", type=int, default=9227)
     kw.add_argument("--pause-min", type=float, default=1.0)
     kw.add_argument("--pause-max", type=float, default=3.0)
     kw.add_argument("-q", "--quiet", action="store_true")
-
-    kws = sub.add_parser("search-slices", help="按年月切片批量搜索")
-    kws.add_argument("keyword")
-    kws.add_argument("--kind", choices=["top", "posts"], default="posts")
-    kws.add_argument("--years", nargs="*", type=int, default=[2025, 2026])
-    kws.add_argument("--months", nargs="*", type=int, default=list(range(1, 13)))
-    kws.add_argument("-o", "--output", default=POSTS_OUTPUT_DIR)
-    kws.add_argument("--port", type=int, default=9227)
-    kws.add_argument("--pause", type=float, default=2.0)
-    kws.add_argument("-q", "--quiet", action="store_true")
 
     a = ap.parse_args(argv)
     setup(quiet=a.quiet)
@@ -517,8 +495,6 @@ def main(argv=None):
         collect_post_url(**params)
     elif a.cmd == "build":
         build_posts_from_raw(**params)
-    elif a.cmd == "search-slices":
-        collect_keyword_slices(**params)
     elif a.cmd == "search":
         collect_keyword(**params)
     elif a.cmd == "translate-raw":

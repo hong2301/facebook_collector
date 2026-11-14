@@ -102,7 +102,7 @@ python code/features.py plan
 
 # 关键词搜索采集
 python code/features.py search "freestyle libre 3" --kind posts --year 2026
-python code/features.py search-slices "freestyle libre 3" --years 2025 2026
+python code/features.py search "freestyle libre 3" --years 2025 2026  # 切片
 python code/features.py login main
 python code/features.py post <帖子链接> --sort all
 
@@ -117,7 +117,7 @@ python code/features.py plan
 
 # 关键词搜索采集
 python code/features.py search "freestyle libre 3" --kind posts --year 2026
-python code/features.py search-slices "freestyle libre 3" --years 2025 2026
+python code/features.py search "freestyle libre 3" --years 2025 2026  # 切片
 python code/features.py login main --max-comments 100   --scroll-pause-min 1.5 --scroll-pause-max 3 --pause-min 1.5 --pause-max 3
 
 # 或在代码里组合原子动作
