@@ -125,6 +125,20 @@ open_port → check_login
 - 只删「自身及子孙没有待展开按钮」的评论节点，有子评论先跳过
 - composer 整块 = `contenteditable` 的最近 `div[role="table"]`，连头像/工具/发布一起删，保留最后一块
 
+## 关键词搜索采集
+
+```python
+features.collect_keyword(keyword, kind="posts", since="2025-01-01",
+                         recent=False, seen=False, year=None, month=None,
+                         author_me=False, port=9227)
+features.collect_keyword_slices(keyword, years=[2025, 2026], months=1..12)
+```
+
+- 筛选条件走 URL 的 `filters`（base64 JSON），结构：`{"rp_creation_time:0":"{\"name\":\"creation_time\",...}"}`
+- 搜索接口 `SearchCometResultsPaginatedResultsQuery`，响应 `data.serpResponse.results.edges[].rendering_strategy.view_model.story`
+- 单个搜索链接结果有限（几十条），要多拿必须按年月切片
+- 必须**先开监听再 get 页面**，否则首屏搜索响应会漏
+
 ## 帖子链接格式
 
 `lib/post.parse_post_id` 兼容：

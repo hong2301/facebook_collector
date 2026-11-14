@@ -6,6 +6,10 @@
 | 采集单个帖子+评论   | `collect_post_url(...)`     | post_url / output / sort / max_comments / 等待参数 |
 | 批量采集帖子        | `collect_posts(...)`        | urls 或 input_file / start / end / output / 采集参数 |
 | 生成待补采清单      | `plan_missing_posts(...)`   | posts_dir / out_file / limit |
+| 翻译                | `translate_dataset(...)`    | kind=post/comment/all / limit |
+| 翻译回写 raw        | `translate_raw(...)`        | raw_dir / engine / limit |
+| 关键词搜帖          | `collect_keyword(...)`      | keyword / kind / 筛选 / since |
+| 关键词按月切片搜     | `collect_keyword_slices(...)` | keyword / years / months / output |
 
 参数属于功能本身，其它功能不共用。直接运行本文件即按默认参数执行。
 """
@@ -181,32 +185,25 @@ def build_posts_from_raw(raw_dir=RAW_DIR, output=None):
 
 
 def plan_missing_posts(posts_dir=None, out_file=None, limit=0):
-    """对比 comment_count 与已提取的预览评论数，输出需要补采的帖子清单。
-
-    清单写成 CSV（url,note），可直接喂给 collect_posts。
-    """
+    """生成待补采清单：只保留「有评论且还没采全」的帖子。"""
     posts_dir = posts_dir or POSTS_OUTPUT_DIR
     out_file = out_file or INPUT_POSTS_FILE
-    idle = full = done = 0
+    no_comment = full = 0
     rows = []
     for path in glob.glob(os.path.join(posts_dir, "*.json")):
         with open(path, encoding="utf-8") as f:
             d = json.load(f)
-        total = d.get("comment_count")
+        total = d.get("comment_count") or 0
         have = d.get("comment_collected") or 0
-        if not total:
-            idle += 1
+        if total == 0:                 # 评论值为 0，不进清单
+            no_comment += 1
             continue
-        if have >= total:
+        if have >= total:              # 已经采全
             full += 1
-            continue
-        # 已开页采过（评论数超过预览上限 2）的不再重复
-        if have > 2:
-            done += 1
             continue
         rows.append((d["post_url"], total - have, d["post_time"]))
 
-    rows.sort(key=lambda r: r[1])           # 待补少的先采（几百条的大帖放最后）
+    rows.sort(key=lambda r: r[1])
     if limit:
         rows = rows[:limit]
     with open(out_file, "w", encoding="utf-8-sig", newline="") as f:
@@ -215,9 +212,193 @@ def plan_missing_posts(posts_dir=None, out_file=None, limit=0):
         for url, need, ts in rows:
             w.writerow([url, f"missing={need} {ts}"])
 
-    log.info("零评论 %s | 已覆盖 %s | 已开页采过 %s | 待补采 %s（写入 %s）",
-             idle, full, done, len(rows), out_file)
+    log.info("评论为0 %s | 已采全 %s | 待补采 %s（%s）",
+             no_comment, full, len(rows), out_file)
     return len(rows)
+
+
+
+def translate_dataset(kind="all", limit=0, pause=1.2):
+    """给 posts / comments 补充中文译文（text_zh）。
+
+    Args:
+        kind: post / comment / all
+        limit: 每类最多处理多少条，0 表示全部
+    """
+    from lib.translate import translate_texts
+
+    posts_dir = POSTS_OUTPUT_DIR
+    comments_dir = os.path.join(ROOT, "data", "comments")
+
+    if kind in ("post", "all"):
+        files = sorted(glob.glob(os.path.join(posts_dir, "*.json")))
+        if limit:
+            files = [f for f in files if not _has_zh(f)][:limit]
+        else:
+            files = [f for f in files if not _has_zh(f)]
+        texts = []
+        docs = []
+        for f in files:
+            with open(f, encoding="utf-8") as fh:
+                d = json.load(fh)
+            t = (d.get("text") or "").strip()
+            if t:
+                texts.append(t)
+                docs.append((f, d))
+        log.info("帖子待翻译 %s 条", len(texts))
+        trans = translate_texts(texts, pause=pause) if texts else {}
+        n = 0
+        for f, d in docs:
+            zh = trans.get((d.get("text") or "").strip())
+            if zh:
+                d["text_zh"] = zh
+                with open(f, "w", encoding="utf-8") as fh:
+                    json.dump(d, fh, ensure_ascii=False, indent=2)
+                n += 1
+        log.info("帖子已翻译 %s / %s", n, len(texts))
+
+    if kind in ("comment", "all"):
+        files = sorted(glob.glob(os.path.join(comments_dir, "*.csv")))
+        rows_all = []
+        for f in files:
+            with open(f, encoding="utf-8-sig", newline="") as fh:
+                rows = list(csv.DictReader(fh))
+            need = [r for r in rows if (r.get("text") or "").strip()
+                    and not (r.get("text_zh") or "").strip()]
+            if need:
+                rows_all.append((f, rows, need))
+        total = sum(len(x[2]) for x in rows_all)
+        log.info("评论待翻译 %s 条（%s 个文件）", total, len(rows_all))
+        texts = [r["text"].strip() for _, _, need in rows_all for r in need]
+        if limit:
+            texts = texts[:limit]
+        trans = translate_texts(texts, pause=pause) if texts else {}
+        n = 0
+        for f, rows, need in rows_all:
+            changed = False
+            for r in rows:
+                src = (r.get("text") or "").strip()
+                zh = trans.get(src)
+                if zh and not (r.get("text_zh") or "").strip():
+                    r["text_zh"] = zh
+                    n += 1
+                    changed = True
+            if changed:
+                cols = list(rows[0].keys())
+                with open(f, "w", encoding="utf-8-sig", newline="") as fh:
+                    w = csv.DictWriter(fh, cols)
+                    w.writeheader()
+                    w.writerows(rows)
+        log.info("评论已翻译 %s / %s", n, len(texts))
+
+
+def _has_zh(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return bool(json.load(f).get("text_zh"))
+    except Exception:
+        return False
+
+
+
+def translate_raw(raw_dir=None, limit=0):
+    """把 raw 里的帖子/评论正文翻译后写回 aiTranslateText（不覆盖原字段）。"""
+    from lib.config import RAW_DIR
+    raw_dir = raw_dir or RAW_DIR
+    log.info("raw 翻译：%s", raw_dir)
+    total, uniq, written = atoms.translate_raw_fields(raw_dir, limit=limit)
+    log.info("完成：字段 %s，唯一文本 %s，写入 %s", total, uniq, written)
+    return written
+
+
+
+def collect_keyword(keyword, kind="top", since="2025-01-01", output=None,
+                    recent=False, seen=False, year=None, month=None,
+                    author_me=False, pause_min=1.0, pause_max=3.0, port=9227):
+    """按关键词搜索并采集帖子。
+
+    Args:
+        keyword:   搜索词
+        kind:      top（综合）/ posts（帖子）
+        since:     采到这个日期之前就停
+        recent:    只看近期帖子
+        seen:      只看你看过的帖子
+        year/month: 按发布日期筛选
+        author_me: 只看自己发的
+    """
+    from lib.config import POSTS_DIR
+    from lib import search as searchlib
+
+    url = searchlib.build_search_url(
+        keyword, kind=kind, recent=recent, seen=seen,
+        year=year, month=month, author_me=author_me)
+    output = output or POSTS_DIR
+    log.info("关键词=%s | 类型=%s | since=%s", keyword, kind, since)
+    log.info("搜索链接：%s", url)
+
+    atoms.open_port(port)
+    if not atoms.check_login():
+        return {}
+
+    return atoms.collect_search_posts(
+        url, output=output, since=since,
+        pause_min=pause_min, pause_max=pause_max)
+
+
+
+def collect_keyword_slices(keyword, kind="posts", years=None, months=None,
+                           output=None, port=9227, pause=2.0,
+                           pause_min=1.0, pause_max=2.0):
+    """按年月切片批量搜索：每个月单独搜一次，规避搜索结果条数上限。
+
+    Args:
+        years:  要搜的年份，默认 [2025, 2026]
+        months: 要搜的月份，默认 1-12
+        pause:  每个切片之间的间隔（秒）
+
+    Returns:
+        (总帖子数, 切片数)
+    """
+    import time as _time
+    from lib.config import POSTS_DIR
+    from lib import search as searchlib
+
+    years = years or [2025, 2026]
+    months = months or list(range(1, 13))
+    output = output or POSTS_DIR
+    os.makedirs(output, exist_ok=True)
+
+    # 已存在的帖子不重复采
+    seen = {f[:-5] for f in os.listdir(output) if f.endswith(".json")}
+    log.info("已有帖子 %s，关键词=%s，切片 %s 年 × %s 月",
+             len(seen), keyword, len(years), len(months))
+
+    atoms.open_port(port)
+    if not atoms.check_login():
+        return 0, 0
+
+    total = 0
+    slices = 0
+    for y in years:
+        for m in months:
+            url = searchlib.build_search_url(keyword, kind=kind, year=y, month=m)
+            slices += 1
+            log.info("切片 %s/%s：%s", slices, len(years) * len(months), url[:110])
+            try:
+                info = atoms.collect_search_posts(
+                    url, output=output, since=f"{y}-{m:02d}-01",
+                    pause_min=pause_min, pause_max=pause_max)
+                total += info.get("posts", 0)
+                log.info("  本切片 %s 帖（累计 %s）", info.get("posts", 0), total)
+            except KeyboardInterrupt:
+                raise
+            except Exception:
+                log.exception("切片失败：%s-%s", y, m)
+            _time.sleep(pause)
+
+    log.info("按月搜索完成：%s 个切片，共 %s 帖", slices, total)
+    return total, slices
+
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Facebook 采集功能")
@@ -291,6 +472,42 @@ def main(argv=None):
     m.add_argument("--limit", type=int, default=0, help="0=全部")
     m.add_argument("-q", "--quiet", action="store_true")
 
+    tr = sub.add_parser("translate", help="翻译 posts/comments 的正文")
+    tr.add_argument("--kind", choices=["post", "comment", "all"], default="all")
+    tr.add_argument("--limit", type=int, default=0, help="每类最多处理条数")
+    tr.add_argument("--pause", type=float, default=1.2)
+    tr.add_argument("-q", "--quiet", action="store_true")
+
+    trr = sub.add_parser("translate-raw", help="翻译写回 raw 的 aiTranslateText")
+    trr.add_argument("--raw-dir", default=RAW_DIR)
+    trr.add_argument("--limit", type=int, default=0)
+    trr.add_argument("-q", "--quiet", action="store_true")
+
+    kw = sub.add_parser("search", help="按关键词搜索采集帖子")
+    kw.add_argument("keyword", help="搜索词")
+    kw.add_argument("--kind", choices=["top", "posts"], default="top")
+    kw.add_argument("--since", default="2025-01-01")
+    kw.add_argument("-o", "--output", default=POSTS_OUTPUT_DIR)
+    kw.add_argument("--recent", action="store_true", help="只看近期帖子")
+    kw.add_argument("--seen", action="store_true", help="只看你看过的")
+    kw.add_argument("--year", type=int, help="按发布年份筛选")
+    kw.add_argument("--month", type=int, help="搭配 --year 用")
+    kw.add_argument("--author-me", action="store_true", help="只看自己发的")
+    kw.add_argument("--port", type=int, default=9227)
+    kw.add_argument("--pause-min", type=float, default=1.0)
+    kw.add_argument("--pause-max", type=float, default=3.0)
+    kw.add_argument("-q", "--quiet", action="store_true")
+
+    kws = sub.add_parser("search-slices", help="按年月切片批量搜索")
+    kws.add_argument("keyword")
+    kws.add_argument("--kind", choices=["top", "posts"], default="posts")
+    kws.add_argument("--years", nargs="*", type=int, default=[2025, 2026])
+    kws.add_argument("--months", nargs="*", type=int, default=list(range(1, 13)))
+    kws.add_argument("-o", "--output", default=POSTS_OUTPUT_DIR)
+    kws.add_argument("--port", type=int, default=9227)
+    kws.add_argument("--pause", type=float, default=2.0)
+    kws.add_argument("-q", "--quiet", action="store_true")
+
     a = ap.parse_args(argv)
     setup(quiet=a.quiet)
     params = {k: v for k, v in vars(a).items() if k not in ("cmd", "quiet")}
@@ -300,6 +517,14 @@ def main(argv=None):
         collect_post_url(**params)
     elif a.cmd == "build":
         build_posts_from_raw(**params)
+    elif a.cmd == "search-slices":
+        collect_keyword_slices(**params)
+    elif a.cmd == "search":
+        collect_keyword(**params)
+    elif a.cmd == "translate-raw":
+        translate_raw(**params)
+    elif a.cmd == "translate":
+        translate_dataset(**params)
     elif a.cmd == "plan":
         plan_missing_posts(**params)
     else:

@@ -227,7 +227,7 @@ def set_sort(kind="most_relevant", tab=None):
         log.info("评论排序切换为 %s", zh)
         return True
 
-    log.debug("排序切换失败：%s", zh)
+    log.debug("未找到排序入口（该帖可能没有可见评论）")
     return False
 
 
@@ -428,8 +428,15 @@ def parse_post_lines(lines):
     }
 
 
-COMMENT_FIELDS = ["post_id", "comment_id", "parent_id", "depth", "author",
-                  "text", "time", "like_count"]
+COMMENT_FIELDS = [
+    "post_id", "comment_id", "parent_id", "depth",
+    "author", "author_id", "author_url", "author_avatar", "author_gender",
+    "text", "text_ranges", "time", "created_time",
+    "like_count", "like_breakdown", "reactors_count",
+    "reply_count", "attachments", "is_ai", "is_hidden", "is_disabled",
+    "spam_mode", "group_id", "is_anonymous", "has_attached_story",
+    "translated", "translation_available",
+]
 
 
 def _read_existing_comments(path):
@@ -469,6 +476,7 @@ def save_result(posts_dir, post_id, post_url, base, comments):
     doc.update({
         "post_id": post_id,
         "post_url": post_url or doc.get("post_url", ""),
+        # 采到 0 条也标记为已尝试，避免反复重采（FB 计数含已删评论）
         "comment_source": "post_page",
         "fetched_at": time.strftime("%Y-%m-%d %H:%M:%S"),
     })

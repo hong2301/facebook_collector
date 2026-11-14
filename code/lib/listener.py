@@ -24,8 +24,7 @@ from .config import RAW_DIR
 from .logger import get_logger
 
 log = get_logger("listener")
-INDEX_FIELDS = ["seq", "file", "ts", "group", "doc_id", "type",
-                "bytes", "n_posts", "min_ts", "max_ts"]
+
 
 # 只关心真实数据接口，过滤埋点/配置类
 SKIP_DOCS = {
@@ -87,12 +86,14 @@ def parse_body_tree(lines):
             merge(tree, path, data)
         elif isinstance(data, dict) and "node" in data:
             merge(tree, ["node"], data["node"])
+        elif isinstance(data, dict) and "serpResponse" in data:
+            merge(tree, ["serpResponse"], data["serpResponse"])
     return tree
 
 
 class GraphQLRecorder(threading.Thread):
     def __init__(self, tab, outdir=RAW_DIR, exclude_docs=None, group="",
-                 feed_only=True, index_name="index.csv"):
+                 feed_only=True):
         super().__init__(daemon=True)
         self.tab = tab
         self.outdir = outdir
@@ -103,22 +104,9 @@ class GraphQLRecorder(threading.Thread):
         self.seq = 0
         self.records = []
         self.errors = []
-        self.index_csv = os.path.join(outdir, index_name)
-        os.makedirs(outdir, exist_ok=True)
-        self.seq = self._last_seq()
 
-    def _last_seq(self):
-        """接续已有 index.csv 的序号，避免覆盖/重号。"""
-        if not os.path.exists(self.index_csv):
-            return 0
-        last = 0
-        try:
-            with open(self.index_csv, encoding="utf-8-sig", newline="") as f:
-                for row in csv.DictReader(f):
-                    last = max(last, int(row.get("seq") or 0))
-        except Exception:
-            pass
-        return last
+        os.makedirs(outdir, exist_ok=True)
+        self.seq = 0
 
     def run(self):
         while self.running:
@@ -147,6 +135,8 @@ class GraphQLRecorder(threading.Thread):
 
         tree = parse_body_tree(raw.split(chr(10)))
         root = tree.get("node") or {}
+        if not root and isinstance(tree.get("serpResponse"), dict):
+            root = {"serpResponse": tree["serpResponse"]}
         if isinstance(root.get("group_feed"), dict):
             rtype = "feed"
             edges = root["group_feed"].get("edges") or []
@@ -157,6 +147,9 @@ class GraphQLRecorder(threading.Thread):
             rtype = "comments_top"
             edges = ((root["comment_rendering_instance_for_feed_location"]
                       .get("comments") or {}).get("edges") or [])
+        elif isinstance(root.get("serpResponse"), dict):
+            rtype = "search"
+            edges = ((root["serpResponse"].get("results") or {}).get("edges") or [])
         else:
             rtype = "other"
             edges = []
@@ -176,7 +169,12 @@ class GraphQLRecorder(threading.Thread):
 
         self.seq += 1
         ts = time.strftime("%Y%m%d-%H%M%S")
-        fn = f"{self.seq:04d}_{ts}_{doc or 'nodoc'}.jsonl"
+        base = f"{ts}_{doc or 'nodoc'}"
+        fn = base + ".jsonl"
+        n = 1
+        while os.path.exists(os.path.join(self.outdir, fn)):
+            n += 1
+            fn = f"{base}_{n}.jsonl"
         with open(os.path.join(self.outdir, fn), "w", encoding="utf-8") as f:
             f.write(raw)
 
@@ -189,15 +187,6 @@ class GraphQLRecorder(threading.Thread):
             "max_ts": max(times) if times else "",
         }
         self.records.append(rec)
-        self._append_index(rec)
-
-    def _append_index(self, rec):
-        new = not os.path.exists(self.index_csv)
-        with open(self.index_csv, "a", encoding="utf-8-sig", newline="") as f:
-            w = csv.DictWriter(f, INDEX_FIELDS)
-            if new:
-                w.writeheader()
-            w.writerow(rec)
 
     def stop(self):
         self.running = False
